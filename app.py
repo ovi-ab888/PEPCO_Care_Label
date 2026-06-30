@@ -753,31 +753,42 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     # ============================================================
     # CSV EXPORT
     # ============================================================
-    csv_buffer = StringIO()
-    writer = pycsv.writer(csv_buffer, delimiter=';', quoting=pycsv.QUOTE_ALL)
-    writer.writerow(final_cols)
-    
-    for row in edited_df.itertuples(index=False):
-        clean_row = tuple(str(x) if pd.notna(x) else "" for x in row)
-        writer.writerow(clean_row)
-    
-    # Generate filename
-    if not df.empty:
-        first_row_df = df.iloc[0]
-        sku_val = first_row_df.get("SKU_Name", "UNKNOWN")
-        supplier_code = first_row_df.get("Supplier_product_code", "UNKNOWN")
-        style_val = first_row_df.get("Style", "UNKNOWN")
-        custom_filename = f"PEPCO_{sku_val}_CareLabel_{supplier_code}_00_{style_val}.csv"
-    else:
-        custom_filename = "PEPCO_export.csv"
-    
-    st.download_button(
-        "📥 Download CSV",
-        csv_buffer.getvalue().encode('utf-8-sig'),
-        file_name=custom_filename,
-        mime="text/csv"
-    )
+# ============================================================
+# CSV EXPORT (আপডেটেড ফাইল নাম)
+# ============================================================
+csv_buffer = StringIO()
+writer = pycsv.writer(csv_buffer, delimiter=';', quoting=pycsv.QUOTE_ALL)
+writer.writerow(final_cols)
 
+for row in edited_df.itertuples(index=False):
+    clean_row = tuple(str(x) if pd.notna(x) else "" for x in row)
+    writer.writerow(clean_row)
+
+# Generate filename with all SKUs
+if not df.empty:
+    first_row_df = df.iloc[0]
+    
+    # সব SKU নাম একত্রিত করুন
+    all_skus = df['SKU_Name'].tolist()
+    # শুধু ইউনিক SKU রাখুন (যদি ডুপ্লিকেট থাকে)
+    unique_skus = list(dict.fromkeys(all_skus))
+    # আন্ডারস্কোর দিয়ে জয়েন করুন
+    sku_str = "_".join(unique_skus)
+    
+    supplier_code = first_row_df.get("Supplier_product_code", "UNKNOWN")
+    style_val = first_row_df.get("Style", "UNKNOWN")
+    
+    # ফাইল নাম তৈরি করুন
+    custom_filename = f"PEPCO_{sku_str}_CareLabel_{supplier_code}_00_{style_val}.csv"
+else:
+    custom_filename = "PEPCO_export.csv"
+
+st.download_button(
+    "📥 Download CSV",
+    csv_buffer.getvalue().encode('utf-8-sig'),
+    file_name=custom_filename,
+    mime="text/csv"
+)
 # ================================================================
 # PEPCO SECTION (Uploader + Reset)
 # ================================================================
