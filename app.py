@@ -471,7 +471,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
             val = row.iloc[0].get(col, "")
             if pd.notna(val) and str(val).strip() and val != mat_name:
                 translations.append(str(val).strip())
-        return f"{pct}% {' / '.join(translations)}"
+        return f"{pct}% {'/ '.join(translations)}"
     
     def get_component_name_translations(comp_name):
         if comp_translations_df.empty:
@@ -485,7 +485,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
                 val = row.iloc[0].get(col, "")
                 if pd.notna(val) and str(val).strip():
                     translations.append(str(val).strip())
-        return " / ".join(translations)
+        return "/ ".join(translations)
     
     def get_care_instruction_all_languages(inst_text, care_instructions_df):
         if not inst_text or care_instructions_df.empty:
