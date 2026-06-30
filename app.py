@@ -141,8 +141,6 @@ WASHING_CODES = {
 }
 
 
-
-
 # ================================================================
 # PART 2 — DATA LOADERS + HELPER FUNCTIONS
 # ================================================================
@@ -195,11 +193,6 @@ def load_component_translations():
         })
 
 
-
-
-
-
-
 # ================================================================
 #  MATERIAL TRANSLATION LOADER
 # ================================================================
@@ -241,25 +234,6 @@ def load_material_translations():
                     {'material': 'Elastane', 'language': 'AL', 'translation': 'Elastan'},
                     {'material': 'Elastane', 'language': 'MK', 'translation': 'Еластан'}]
         return pd.DataFrame(fallback)
-
-
-# ================================================================
-#  HELPER FUNCTIONS
-# ================================================================
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 # ================================================================
@@ -328,7 +302,7 @@ def extract_data_from_pdf(file):
         full_text = "\n".join(pages_text)
         page1 = pages_text[0]
 
-        # Item_name_EN - রাখা হয়েছে (CSV তে না থাকলেও কাজে লাগতে পারে)
+        # Item_name_EN - রাখা হয়েছে
         m_item = re.search(r"Item\s*name\s*English\s*[:\.]{1,}\s*(.+)", full_text, re.IGNORECASE)
         if not m_item:
             m_item = re.search(r"Item\s*name\s*[:\.]{1,}\s*(.+?)\n", full_text, re.IGNORECASE)
@@ -360,7 +334,6 @@ def extract_data_from_pdf(file):
         supplier_name = re.search(r"Supplier name\s*\.{2,}\s*(.+)", page1)
 
         item_class_value = item_class.group(1).strip() if item_class else "UNKNOWN"
-        # ❌ get_classification_type() রিমুভ করা হয়েছে - দরকার নেই
 
         colour = extract_colour_from_pdf_pages(pages_text)
 
@@ -424,12 +397,11 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     """PDF থেকে ডাটা নিয়ে CSV বানাও"""
     
     # ডাটা লোড করি
-    translations_df = load_product_translations()
     material_translations_df = load_material_translations()
     care_data = load_care_composition_data()
     comp_translations_df = load_component_translations()
 
-    if not (uploaded_pdf and not translations_df.empty):
+    if not uploaded_pdf:
         return
 
     # PDF থেকে ডাটা এক্সট্র্যাক্ট করি
@@ -438,9 +410,6 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         return
 
     df = pd.DataFrame(result_data)
-    first_row = result_data[0]
-    pdf_item_class = first_row.get("Item_classification", "")
-    pdf_item_name_en = (first_row.get("Item_name_EN") or "").strip()
 
     # একাধিক PDF থাকলে Order ID যোগ করি
     if extra_order_ids:
@@ -453,11 +422,8 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     washing_code_key = st.selectbox("Select Washing Code", options=washing_options, key="ui_wash")
 
     # ============================================================
-    # Material Composition (আপনার আগের কোড)
+    # Material Composition
     # ============================================================
-    # এখানে আপনার Material Composition UI বসবে
-    # (আমি আগের কোড থেকে নিচ্ছি)
-    
     st.markdown("### 🧵 Material Composition (%)")
     
     materials_df = care_data.get("materials", pd.DataFrame())
@@ -477,12 +443,6 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         component_options = comp_translations_df["EN"].dropna().astype(str).tolist()
     if not component_options:
         component_options = ["Main fabric", "Outer fabric", "Lining", "Pocket bag", "Collar", "Cuff"]
-    
-    # Composition instructions options
-    comp_inst_options = [""]
-    if not comp_instructions_df.empty:
-        en_col = comp_instructions_df.columns[0]
-        comp_inst_options.extend(comp_instructions_df[en_col].dropna().astype(str).tolist())
     
     # Mode toggle
     use_advanced_mode = st.toggle("🔧 Advanced Mode (Multiple Components)", value=False)
@@ -527,20 +487,6 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
                     translations.append(str(val).strip())
         return " / ".join(translations)
     
-    def get_instruction_all_languages(inst_text):
-        if not inst_text or comp_instructions_df.empty:
-            return ""
-        en_col = comp_instructions_df.columns[0]
-        row = comp_instructions_df[comp_instructions_df[en_col].astype(str).str.strip() == inst_text]
-        if row.empty:
-            return ""
-        translations = []
-        for col in comp_instructions_df.columns:
-            val = row.iloc[0].get(col, "")
-            if pd.notna(val) and str(val).strip():
-                translations.append(str(val).strip())
-        return " / ".join(translations)
-    
     def get_care_instruction_all_languages(inst_text, care_instructions_df):
         if not inst_text or care_instructions_df.empty:
             return ""
@@ -570,7 +516,6 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     components_data = []
     selected_materials = []
     final_composition_text = ""
-    simple_comp_inst = ""
     
     for block_idx, block in enumerate(st.session_state.composition_blocks):
         with st.container(border=True):
@@ -594,8 +539,6 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
                     if st.button("🗑️", key=f"remove_block_{block_idx}"):
                         st.session_state.composition_blocks.pop(block_idx)
                         st.rerun()
-            
-
             
             st.markdown("#### Materials")
             for mat_idx, mat in enumerate(block["materials"]):
@@ -642,15 +585,6 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
                 st.info("📌 Enter material composition")
             
             if valid_materials and total_pct == 100:
-                preview_text = build_material_line(valid_materials, use_translation=True)
-                if use_advanced_mode:
-                    comp_translated = get_component_name_translations(block["component_name"])
-                    full_preview = f"{comp_translated}: {preview_text}"
-                else:
-                    full_preview = preview_text
-                
-            
-            if valid_materials and total_pct == 100:
                 components_data.append({
                     "name": block["component_name"],
                     "comp_inst": block.get("comp_inst", "") if use_advanced_mode else "",
@@ -672,8 +606,6 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         else:
             st.info("Maximum 5 components allowed")
     
-
-    
     # Build final composition
     composition_lines = []
     for comp in components_data:
@@ -681,13 +613,8 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         if use_advanced_mode:
             comp_translated = get_component_name_translations(comp["name"])
             line = f"{comp_translated}:\n\n{material_text}"
-
         else:
             line = material_text
-            if simple_comp_inst:
-                inst_text = get_instruction_all_languages(simple_comp_inst)
-                if inst_text:
-                    line += f"\n\n(Composition Instructions: {inst_text})"
         composition_lines.append(line)
     
     final_composition_text = "\n\n".join(composition_lines)
@@ -707,7 +634,6 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
                         comp_parts.append(f"{mat['pct']}% {t['translation'].iloc[0]}")
             if comp_parts:
                 material_compositions[lang] = ", ".join(comp_parts)
-    
 
     # ============================================================
     # CARE INSTRUCTIONS
@@ -752,13 +678,11 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
             all_care_inst_translated.append(inst_text)
     
     care_inst_translated = "\n\n".join(all_care_inst_translated) if all_care_inst_translated else ""
-    
 
     # ============================================================
     # CSV তৈরি
     # ============================================================
     df['washing_code'] = WASHING_CODES[washing_code_key]
-    df["Item_name_English"] = df["Item_name_EN"].apply(clean_item_name_english)
     
     combined_care = ""
     if final_composition_text and care_inst_translated:
@@ -769,21 +693,17 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         combined_care = care_inst_translated
     
     df['Composition_Care'] = combined_care
-    df['SKU_Name'] = df['Colour_SKU'].apply(lambda x: re.sub(r".*SKU\s*", "", x))
     
-    # product_name সরাসরি PDF থেকে
-    df['product_name'] = df['Item_name_EN'].apply(lambda x: x.upper() if x else "")
+    # SKU_Name তৈরি - barcode থেকে
+    df['SKU_Name'] = df['barcode'].astype(str)
     
     # CSV এর কলাম
     final_cols = [
         "Order_ID", "Style", "Colour", "Supplier_product_code", "Item_classification",
         "Supplier_name", "today_date",
-        "barcode",  "SKU_Name", "washing_code",
+        "barcode", "SKU_Name", "washing_code",
         "Season", "Composition_Care"
     ]
-    
-    if 'Cotton' in df.columns and 'Cotton' not in final_cols:
-        final_cols.append("Cotton")
     
     for col in final_cols:
         if col not in df.columns:
@@ -802,7 +722,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     
     first_row_df = df.iloc[0]
     season_val = first_row_df.get("Season", "UNKNOWN").upper()
-    all_skus = df['Colour_SKU'].apply(lambda x: re.sub(r".*SKU\s*", "", x)).tolist()
+    all_skus = df['SKU_Name'].tolist()
     sku_val = "_".join(all_skus) if all_skus else "UNKNOWN"
     supplier_code = first_row_df.get("Supplier_product_code", "UNKNOWN")
     style_val = first_row_df.get("Style", "UNKNOWN")
@@ -814,6 +734,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         file_name=custom_filename,
         mime="text/csv"
     )
+
 
 # ================================================================
 #  PEPCO SECTION (Uploader + Reset)
