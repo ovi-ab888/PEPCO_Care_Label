@@ -140,18 +140,7 @@ WASHING_CODES = {
     '11': 'ijnst', '12': 'ijnsu', '13': 'ijnpu', '14': 'ijnsv', '15': 'djnsw'
 }
 
-COLLECTION_MAPPING = {
-    "a": {"CUTE BEAR": "MODERN 1", "SUMMER CHERRY": "ROMANTIC 1", "AUTUMN": "ROMANTIC 2"},
-    "d_girls": {"FLOWER MOUSE": "MODERN 1", "LITTEL FOREST": "ROMANTIC 1"},
-    "b": {"DOGS&FRIENDS": "MODERN 1", "EXPOLORE THE MOUNTINE": "MODERN 2", "SUMMER FUN": "MODERN 4", "COOL TRIP": "CLASSIC 1", "COLLEGE BEARS": "CLASSIC 1"},
-    "d": {"DOGS FRIENDS": "CLASSIC 1", "FOREST STORY": "MODERN 1", "LITTLE DREAMER": "MODERN 1", "X-MAS": "CLASSIC 2"},
-    "yg": {"PONNY_RAINBOW": "COLLECTION 1", "MEOW_STORY": "COLLECTION 2", "BTS": "COLLECTION 3", "COZY AUTUMN": "COLLECTION 4", "WINTER BALLET": "COLLECTION 5", "XMAS": "COLLECTION 6", "PARTY": "COLLECTION 7"},
-    "og": {"TRANSITIONAL_GRAFFITI VIBES": "COLLECTION_0", "COOL STYLE": "COLLECTION_1", "COOL COLLEGE LEAGUE": "COLLECTION_2", "GLAMROCK GIRL": "COLLECTION_3", "COZYTIME": "COLLECTION_4", "XMAS & PARTY": "COLLECTION_5"},
-    "yb": {"XXXXX_1": "COLLECTION_1", "XXXXX_2": "COLLECTION_2", "XXXXX_3": "COLLECTION_3", "XXXXX_4": "COLLECTION_4", "XXXXX_5": "COLLECTION_5"},
-    "ob": {"STREET RACING": "COLLECTION_1", "CAMPUS LIFE": "COLLECTION_2", "DIGITAL RIDE": "COLLECTION_3", "XMAS": "COLLECTION_4"},
-    "l": {"XXXXX_1": "COLLECTION_1", "XXXXX_2": "COLLECTION_2", "XXXXX_3": "COLLECTION_3", "XXXXX_4": "COLLECTION_4", "XXXXX_5": "COLLECTION_5"},
-    "m": {"XXXXX_1": "COLLECTION_1", "XXXXX_2": "COLLECTION_2", "XXXXX_3": "COLLECTION_3", "XXXXX_4": "COLLECTION_4", "XXXXX_5": "COLLECTION_5"},
-}
+
 
 
 # ================================================================
@@ -340,16 +329,6 @@ def get_dept_value(item_class):
     return ""
 
 
-def modify_collection(collection, item_class):
-    if not item_class:
-        return collection
-    ic = item_class.lower()
-    if any(x in ic for x in ['younger boys', 'older boys']):
-        return f"{collection} B"
-    if any(x in ic for x in ['younger girls', 'older girls']):
-        return f"{collection} G"
-    return collection
-
 
 def clean_item_name_english(name: str) -> str:
     if not isinstance(name, str):
@@ -446,7 +425,7 @@ def extract_data_from_pdf(file):
         elif merch_code:
             style_suffix = merch_code.group(1).strip()
 
-        collection = re.search(r"Collection\s*\.{2,}\s*(.+)", page1)
+        
         date_match = re.search(r"Handover\s*date\s*\.{2,}\s*(\d{2}/\d{2}/\d{4})", page1)
 
         batch = "UNKNOWN"
@@ -465,12 +444,7 @@ def extract_data_from_pdf(file):
         item_class_value = item_class.group(1).strip() if item_class else "UNKNOWN"
         class_type = get_classification_type(item_class_value)
 
-        collection_value = collection.group(1).split("-")[0].strip() if collection else "UNKNOWN"
-        if class_type and class_type in COLLECTION_MAPPING:
-            for orig, new in COLLECTION_MAPPING[class_type].items():
-                if orig.upper() in collection_value.upper():
-                    collection_value = new
-                    break
+
 
         colour = extract_colour_from_pdf_pages(pages_text)
 
@@ -517,7 +491,6 @@ def extract_data_from_pdf(file):
                 "Item_classification": item_class_value,
                 "Supplier_name": supplier_name.group(1).strip() if supplier_name else "UNKNOWN",
                 "today_date": datetime.today().strftime('%d-%m-%Y'),
-                "Collection": collection_value,
                 "Colour_SKU": f"{colour} • SKU {sku}",
                 "Style_Merch_Season": f"STYLE {style_code.group()} • {style_suffix} • Batch No./" if style_code else "STYLE UNKNOWN",
                 "Batch": f"виготовлення: {batch}",
@@ -985,7 +958,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     elif 'Cotton' in df.columns:
         df = df.drop(columns=['Cotton'])
     
-    df['Collection'] = df.apply(lambda r: modify_collection(r['Collection'], r['Item_classification']), axis=1)
+
     
     # Format product translations with AL/MK compositions
     def format_product_translations(product_name, translation_row, material_compositions=None, components_data=None, comp_translations_df=None, use_advanced_mode=False):
@@ -1107,7 +1080,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     # Price কলাম বাদ দিয়ে Final Columns
     final_cols = [
         "Order_ID", "Style", "Colour", "Supplier_product_code", "Item_classification",
-        "Supplier_name", "today_date", "Collection", "Colour_SKU", "Style_Merch_Season",
+        "Supplier_name", "today_date", "Colour_SKU", "Style_Merch_Season",
         "Batch", "barcode", "washing_code", "product_name", "Dept", 
         "Item_name_English", "Season", "Composition_Care", "SKU_Name"
     ]
