@@ -589,22 +589,22 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         
         return f"{pct}% {'/ '.join(translations)}"
     
-    def get_component_name_translations(comp_name):
-        if comp_translations_df.empty:
-            return comp_name
-        
-        row = comp_translations_df[comp_translations_df['EN'].astype(str).str.strip() == comp_name]
-        if row.empty:
-            return comp_name
-        
-        translations = [comp_name]
-        for col in comp_translations_df.columns:
-            if col != 'EN':
-                val = row.iloc[0].get(col, "")
-                if pd.notna(val) and str(val).strip():
-                    translations.append(str(val).strip())
-        
-        return " / ".join(translations)
+def get_component_name_translations(comp_name):
+    if comp_translations_df.empty:  # খালি হলে
+        return comp_name  # শুধু ইংরেজি নাম রিটার্ন করবে
+    
+    row = comp_translations_df[comp_translations_df['EN'].astype(str).str.strip() == comp_name]
+    if row.empty:
+        return comp_name
+    
+    translations = [comp_name]
+    for col in comp_translations_df.columns:
+        if col != 'EN':
+            val = row.iloc[0].get(col, "")
+            if pd.notna(val) and str(val).strip():
+                translations.append(str(val).strip())
+    
+    return " / ".join(translations)
     
     def get_instruction_all_languages(inst_text):
         if not inst_text or comp_instructions_df.empty:
