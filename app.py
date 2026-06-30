@@ -736,7 +736,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
                     full_preview = f"{comp_translated}: {preview_text}"
                 else:
                     full_preview = preview_text
-                st.code(full_preview, language="text")
+                
             
             if valid_materials and total_pct == 100:
                 components_data.append({
