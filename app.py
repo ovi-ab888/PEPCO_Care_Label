@@ -757,7 +757,7 @@ csv_buffer = StringIO()
 writer = pycsv.writer(csv_buffer, delimiter=';', quoting=pycsv.QUOTE_ALL)
 writer.writerow(final_cols)
 
- for row in edited_df.itertuples(index=False):
+for row in edited_df.itertuples(index=False):
     clean_row = tuple(str(x) if pd.notna(x) else "" for x in row)
     writer.writerow(clean_row)
 
