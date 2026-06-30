@@ -865,9 +865,9 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     # CSV এর কলাম
     final_cols = [
         "Order_ID", "Style", "Colour", "Supplier_product_code", "Item_classification",
-        "Supplier_name", "today_date", "Colour_SKU", "Style_Merch_Season",
-        "Batch", "barcode", "washing_code", "product_name", 
-        "Item_name_English", "Season", "Composition_Care", "SKU_Name"
+        "Supplier_name", "today_date",
+        "barcode",  "SKU_Name", "washing_code", "product_name", 
+        "Season", "Composition_Care"
     ]
     
     if 'Cotton' in df.columns and 'Cotton' not in final_cols:
