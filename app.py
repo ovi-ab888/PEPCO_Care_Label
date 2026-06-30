@@ -92,29 +92,26 @@ div[data-testid="stNumberInput"] input{
 
 
 # ================================================================
-# PASSWORD CHECK SYSTEM (MULTIPLE PASSWORDS)
+#  PASSWORD CHECK SYSTEM
 # ================================================================
 def check_password():
-    """Password gate supporting multiple passwords from secrets."""
-    expected_passwords = None
+    """Simple password gate using secrets or environment."""
+    expected = None
 
     try:
-        expected_passwords = st.secrets.get("app_passwords", None)
+        expected = st.secrets.get("app_password", None)
     except Exception:
-        expected_passwords = None
+        expected = None
 
-    if expected_passwords is None:
-        env_pass = os.environ.get("PEPCO_APP_PASSWORD")
-        if env_pass:
-            expected_passwords = [env_pass]
+    if expected is None:
+        expected = os.environ.get("PEPCO_APP_PASSWORD")
 
-    if expected_passwords is None:
-        st.error("App passwords not configured. Please set 'app_passwords' in secrets or PEPCO_APP_PASSWORD env var.")
+    if expected is None:
+        st.error("App password not configured. Please set 'app_password' in secrets or PEPCO_APP_PASSWORD env var.")
         return False
 
     def _password_entered():
-        entered = st.session_state.get("password", "")
-        if entered in expected_passwords:
+        if st.session_state.get("password") == expected:
             st.session_state["password_correct"] = True
             try:
                 del st.session_state["password"]
@@ -129,7 +126,7 @@ def check_password():
     st.text_input("Enter Your Access Code", type="password", key="password", on_change=_password_entered)
 
     if st.session_state.get("password_correct") is False:
-        st.error("❌ Your password is incorrect. Please contact Mr. Ovi")
+        st.error("Your password Incorrect, Please contact Mr. Ovi")
 
     return False
 
@@ -145,7 +142,17 @@ WASHING_CODES = {
 
 COLLECTION_MAPPING = {
     "a": {"CUTE BEAR": "MODERN 1", "SUMMER CHERRY": "ROMANTIC 1", "AUTUMN": "ROMANTIC 2"},
+    "d_girls": {"FLOWER MOUSE": "MODERN 1", "LITTEL FOREST": "ROMANTIC 1"},
+    "b": {"DOGS&FRIENDS": "MODERN 1", "EXPOLORE THE MOUNTINE": "MODERN 2", "SUMMER FUN": "MODERN 4", "COOL TRIP": "CLASSIC 1", "COLLEGE BEARS": "CLASSIC 1"},
+    "d": {"DOGS FRIENDS": "CLASSIC 1", "FOREST STORY": "MODERN 1", "LITTLE DREAMER": "MODERN 1", "X-MAS": "CLASSIC 2"},
+    "yg": {"PONNY_RAINBOW": "COLLECTION 1", "MEOW_STORY": "COLLECTION 2", "BTS": "COLLECTION 3", "COZY AUTUMN": "COLLECTION 4", "WINTER BALLET": "COLLECTION 5", "XMAS": "COLLECTION 6", "PARTY": "COLLECTION 7"},
+    "og": {"TRANSITIONAL_GRAFFITI VIBES": "COLLECTION_0", "COOL STYLE": "COLLECTION_1", "COOL COLLEGE LEAGUE": "COLLECTION_2", "GLAMROCK GIRL": "COLLECTION_3", "COZYTIME": "COLLECTION_4", "XMAS & PARTY": "COLLECTION_5"},
+    "yb": {"XXXXX_1": "COLLECTION_1", "XXXXX_2": "COLLECTION_2", "XXXXX_3": "COLLECTION_3", "XXXXX_4": "COLLECTION_4", "XXXXX_5": "COLLECTION_5"},
+    "ob": {"STREET RACING": "COLLECTION_1", "CAMPUS LIFE": "COLLECTION_2", "DIGITAL RIDE": "COLLECTION_3", "XMAS": "COLLECTION_4"},
+    "l": {"XXXXX_1": "COLLECTION_1", "XXXXX_2": "COLLECTION_2", "XXXXX_3": "COLLECTION_3", "XXXXX_4": "COLLECTION_4", "XXXXX_5": "COLLECTION_5"},
+    "m": {"XXXXX_1": "COLLECTION_1", "XXXXX_2": "COLLECTION_2", "XXXXX_3": "COLLECTION_3", "XXXXX_4": "COLLECTION_4", "XXXXX_5": "COLLECTION_5"},
 }
+
 
 # ================================================================
 # PART 2 — DATA LOADERS + HELPER FUNCTIONS
@@ -199,7 +206,27 @@ def load_component_translations():
         })
 
 
-
+# ================================================================
+#  PRICE DATA LOADER (Google Sheet)
+# ================================================================
+@st.cache_data(ttl=600)
+def load_price_data():
+    """Load currency price ladder from Google Sheet."""
+    try:
+        url = ("https://docs.google.com/spreadsheets/d/e/"
+               "2PACX-1vRdAQmBHwDEWCgmLdEdJc0HsFYpPSyERPHLwmr2tnTYU1BDWdBD6I0ZYfEDzataX0wTNhfLfnm-Te6w/"
+               "pub?gid=583402611&single=true&output=csv")
+        df = pd.read_csv(url)
+        if df.empty:
+            st.error("Price data sheet is empty")
+            return None
+        price_data = {}
+        for currency in df.columns:
+            price_data[currency] = df[currency].dropna().tolist()
+        return price_data
+    except Exception as e:
+        st.error(f"Failed to load price data: {str(e)}")
+        return None
 
 
 # ================================================================
@@ -286,7 +313,24 @@ def format_number(value, currency):
         return str(value)
 
 
-
+def find_closest_price(pln_value):
+    """Returns matching row of other currencies for the PLN price."""
+    try:
+        price_data = load_price_data()
+        if not price_data or 'PLN' not in price_data:
+            st.error("Price data not available")
+            return None
+        pln_value = float(pln_value)
+        ladder = price_data['PLN']
+        if pln_value not in ladder:
+            st.error(f"PLN {pln_value} not found in price sheet.")
+            return None
+        idx = ladder.index(pln_value)
+        return {currency: format_number(values[idx], currency)
+                for currency, values in price_data.items() if currency != 'PLN'}
+    except Exception as e:
+        st.error(f"Invalid price value: {str(e)}")
+        return None
 
 
 def get_classification_type(item_class):
@@ -607,6 +651,19 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     with c3:
         washing_code_key = st.selectbox("Select Washing Code", options=washing_options, index=washing_default_index, key="ui_wash")
 
+    with c4:
+        pln_price_raw = st.text_input("Enter PLN Price", key="ui_pln_price")
+
+    pln_price = None
+    if pln_price_raw.strip():
+        try:
+            pln_price = float(pln_price_raw.replace(",", "."))
+            if pln_price < 0:
+                st.error("Price can't be negative.")
+                pln_price = None
+        except ValueError:
+            st.error("Please enter a valid number like 12.50 or 12,50")
+            pln_price = None
 
     # ============================================================
     # MATERIAL COMPOSITION UI (Clean Simple + Advanced Version)
@@ -747,13 +804,13 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
                 parts.append(mat_text)
         return "\n\n".join(parts)
     
-    # Initialize variables to avoid NameError
+    # Output variables
     final_composition_text = ""
-    care_inst_translated = ""
-    combined_care = ""
-    components_data = []
     selected_materials = []
+    cotton_value = ""
+    components_data = []
     material_compositions = {}
+    simple_comp_inst = ""
     
     # Render blocks
     for block_idx, block in enumerate(st.session_state.composition_blocks):
@@ -1098,30 +1155,77 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     
     df['washing_code'] = WASHING_CODES[washing_code_key]
     
-    # Initialize variables to avoid NameError
-    final_composition_text = ""
-    care_inst_translated = ""
-    combined_care = ""
-    components_data = []
-    selected_materials = []
-    material_compositions = {}
+    # ============================================================
+    # PRICE LADDER + CSV EXPORT
+    # ============================================================
+    if pln_price is not None:
+        currency_values = find_closest_price(pln_price)
+        if currency_values:
+            for cur in ['EUR', 'BGN', 'BAM', 'RON', 'CZK', 'UAH', 'MKD', 'RSD', 'HUF']:
+                df[cur] = currency_values.get(cur, "")
+            df['PLN'] = format_number(pln_price, 'PLN')
+            df["Item_name_English"] = df["Item_name_EN"].apply(clean_item_name_english)
+            
+            # Composition এবং Care Instructions একসাথে
+            combined_care = ""
+            if final_composition_text and care_inst_translated:
+                combined_care = f"{final_composition_text}\n\n{care_inst_translated}"
+            elif final_composition_text:
+                combined_care = final_composition_text
+            elif care_inst_translated:
+                combined_care = care_inst_translated
+            
+            df['Composition_Care'] = combined_care
+            
+            # SKU Name কলাম
+            df['SKU_Name'] = df['Colour_SKU'].apply(lambda x: re.sub(r".*SKU\s*", "", x))
+            # অথবা শুধু SKU নাম্বার চাইলে:
+            # df['SKU_Name'] = df['Colour_SKU'].apply(lambda x: re.sub(r".*SKU\s*", "", x))
 
-# Generate custom filename
-first_row_df = df.iloc[0]
-season_val = first_row_df.get("Season", "UNKNOWN").upper()
-all_skus = df['Colour_SKU'].apply(lambda x: re.sub(r".*SKU\s*", "", x)).tolist()
-sku_val = "_".join(all_skus) if all_skus else "UNKNOWN"
-supplier_code = first_row_df.get("Supplier_product_code", "UNKNOWN")
-style_val = first_row_df.get("Style", "UNKNOWN")
-
-custom_filename = f"PEPCO_{season_val}_{sku_val}_Swingtag {supplier_code}_00_{style_val}.csv"
-
-st.download_button(
-    "📥 Download CSV",
-    csv_buffer.getvalue().encode('utf-8-sig'),
-    file_name=custom_filename,
-    mime="text/csv"
-)
+            final_cols = [
+                "Order_ID", "Style", "Colour", "Supplier_product_code", "Item_classification",
+                "Supplier_name", "today_date", "Collection", "Colour_SKU", "Style_Merch_Season",
+                "Batch", "barcode", "washing_code", "EUR", "BGN", "BAM", "PLN", "RON", "CZK",
+                "UAH", "MKD", "RSD", "HUF", "product_name", "Dept", "Item_name_English", "Season",
+                "Composition_Care", "SKU_Name"  # নতুন কলাম
+            ]
+            
+            # Optionally include Cotton column
+            if 'Cotton' in df.columns and 'Cotton' not in final_cols:
+                final_cols.append("Cotton")
+            
+            for col in final_cols:
+                if col not in df.columns:
+                    df[col] = ""
+            
+            st.success("✅ Done! Product data processed successfully.")
+            st.subheader("✏️ Edit Before Download")
+            edited_df = st.data_editor(df[final_cols])
+            
+            # ... rest of the code (CSV export)
+            
+            csv_buffer = StringIO()
+            writer = pycsv.writer(csv_buffer, delimiter=';', quoting=pycsv.QUOTE_ALL)
+            writer.writerow(final_cols)
+            for row in edited_df.itertuples(index=False):
+                writer.writerow(row)
+            
+            first_row_df = df.iloc[0]
+            season_val = first_row_df.get("Season", "UNKNOWN").upper()
+            all_skus = df['Colour_SKU'].apply(lambda x: re.sub(r".*SKU\s*", "", x)).tolist()
+            sku_val = "_".join(all_skus) if all_skus else "UNKNOWN"
+            supplier_code = first_row_df.get("Supplier_product_code", "UNKNOWN")
+            style_val = first_row_df.get("Style", "UNKNOWN")
+            custom_filename = f"PEPCO_{season_val}_{sku_val}_Swingtag {supplier_code}_00_{style_val}.csv"
+            
+            st.download_button(
+                "📥 Download CSV",
+                csv_buffer.getvalue().encode('utf-8-sig'),
+                file_name=custom_filename,
+                mime="text/csv"
+            )
+        else:
+            st.warning("⚠️ Processing stopped - valid PLN price not found")
 
 
 # ================================================================
