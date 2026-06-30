@@ -1,8 +1,7 @@
 # ================================================================
-# PART 1 — PAGE CONFIG + IMPORTS + THEME + PASSWORD + CONSTANTS
+# PAGE CONFIG + IMPORTS + THEME + PASSWORD + CONSTANTS
 # ================================================================
 
-# ---------- PAGE CONFIG (must be at top) ----------
 import streamlit as st
 st.set_page_config(
     page_title="PEPCO",
@@ -10,7 +9,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------- Imports ----------
 import fitz  # PyMuPDF
 import pandas as pd
 import re
@@ -20,9 +18,8 @@ from datetime import datetime, timedelta
 import os
 import requests
 
-
 # ================================================================
-#  LOGO & THEME
+# LOGO & THEME
 # ================================================================
 LOGO_PNG = "logo.png"
 LOGO_SVG = "logo.svg"
@@ -90,9 +87,8 @@ div[data-testid="stNumberInput"] input{
 </style>
 """
 
-
 # ================================================================
-#  PASSWORD CHECK SYSTEM
+# PASSWORD CHECK SYSTEM
 # ================================================================
 def check_password():
     """Simple password gate using secrets or environment."""
@@ -130,9 +126,8 @@ def check_password():
 
     return False
 
-
 # ================================================================
-#  CONSTANTS & MAPPINGS
+# CONSTANTS & MAPPINGS
 # ================================================================
 WASHING_CODES = {
     '1': '১২৩৪৫', '2': '১৪৭৮৫', '3': 'djnst', '4': 'djnpt', '5': 'djnqt',
@@ -153,13 +148,8 @@ COLLECTION_MAPPING = {
     "m": {"XXXXX_1": "COLLECTION_1", "XXXXX_2": "COLLECTION_2", "XXXXX_3": "COLLECTION_3", "XXXXX_4": "COLLECTION_4", "XXXXX_5": "COLLECTION_5"},
 }
 
-
 # ================================================================
-# PART 2 — DATA LOADERS + HELPER FUNCTIONS
-# ================================================================
-
-# ================================================================
-#  CARE LABEL & COMPOSITION LOADER (4 sheets from Google Sheet)
+# DATA LOADERS
 # ================================================================
 @st.cache_data(ttl=600)
 def load_care_composition_data():
@@ -171,13 +161,13 @@ def load_care_composition_data():
         "comp_instructions": {"url": f"{BASE_URL}?gid=0&single=true&output=csv", "name": "Composition Instructions"},
         "materials": {"url": f"{BASE_URL}?gid=1935147264&single=true&output=csv", "name": "Materials"},
         "care_instructions": {"url": f"{BASE_URL}?gid=21483732&single=true&output=csv", "name": "Care Instructions"},
-        "component_names": {"url": f"{BASE_URL}?gid=0&single=true&output=csv", "name": "Component Names"}
+        "component_names": {"url": f"{BASE_URL}?gid=1020498108&single=true&output=csv", "name": "Component Names"}
     }
     
     result = {}
     for key, config in sheets_config.items():
         try:
-            df = pd.read_csv(config["url"])
+            df = pd.read_csv(config["url"], encoding='utf-8')
             if not df.empty:
                 result[key] = df
             else:
@@ -187,10 +177,6 @@ def load_care_composition_data():
     
     return result
 
-
-# ================================================================
-#  COMPONENT NAMES TRANSLATIONS LOADER
-# ================================================================
 @st.cache_data(ttl=600)
 def load_component_translations():
     """Load component name translations from Google Sheet"""
@@ -205,33 +191,6 @@ def load_component_translations():
             "BG": ["Основен плат", "Подплата", "Вътрешен джоб", "Подстригване", "Качулка", "Яка", "Маншет"]
         })
 
-
-# ================================================================
-#  PRICE DATA LOADER (Google Sheet)
-# ================================================================
-@st.cache_data(ttl=600)
-def load_price_data():
-    """Load currency price ladder from Google Sheet."""
-    try:
-        url = ("https://docs.google.com/spreadsheets/d/e/"
-               "2PACX-1vRdAQmBHwDEWCgmLdEdJc0HsFYpPSyERPHLwmr2tnTYU1BDWdBD6I0ZYfEDzataX0wTNhfLfnm-Te6w/"
-               "pub?gid=583402611&single=true&output=csv")
-        df = pd.read_csv(url)
-        if df.empty:
-            st.error("Price data sheet is empty")
-            return None
-        price_data = {}
-        for currency in df.columns:
-            price_data[currency] = df[currency].dropna().tolist()
-        return price_data
-    except Exception as e:
-        st.error(f"Failed to load price data: {str(e)}")
-        return None
-
-
-# ================================================================
-#  PRODUCT TRANSLATION LOADER
-# ================================================================
 @st.cache_data(ttl=600)
 def load_product_translations():
     """Load product name translations from Google Sheet."""
@@ -248,10 +207,6 @@ def load_product_translations():
         st.error(f"Failed to load translations: {str(e)}")
         return pd.DataFrame()
 
-
-# ================================================================
-#  MATERIAL TRANSLATION LOADER
-# ================================================================
 @st.cache_data(ttl=600)
 def load_material_translations():
     """Load material translations (AL, MK) with fallback."""
@@ -291,48 +246,9 @@ def load_material_translations():
                     {'material': 'Elastane', 'language': 'MK', 'translation': 'Еластан'}]
         return pd.DataFrame(fallback)
 
-
 # ================================================================
-#  HELPER FUNCTIONS
+# HELPER FUNCTIONS
 # ================================================================
-
-def format_number(value, currency):
-    """Format numeric pricing based on currency."""
-    try:
-        if isinstance(value, str):
-            value = float(value.replace(',', '.'))
-        if currency in ['EUR', 'BGN', 'BAM', 'RON', 'PLN']:
-            formatted = f"{float(value):,.2f}".replace(".", ",")
-            if ',' in formatted:
-                parts = formatted.split(',')
-                parts[0] = parts[0].replace('.', '')
-                formatted = ','.join(parts)
-            return formatted
-        return str(int(float(value)))
-    except (ValueError, TypeError):
-        return str(value)
-
-
-def find_closest_price(pln_value):
-    """Returns matching row of other currencies for the PLN price."""
-    try:
-        price_data = load_price_data()
-        if not price_data or 'PLN' not in price_data:
-            st.error("Price data not available")
-            return None
-        pln_value = float(pln_value)
-        ladder = price_data['PLN']
-        if pln_value not in ladder:
-            st.error(f"PLN {pln_value} not found in price sheet.")
-            return None
-        idx = ladder.index(pln_value)
-        return {currency: format_number(values[idx], currency)
-                for currency, values in price_data.items() if currency != 'PLN'}
-    except Exception as e:
-        st.error(f"Invalid price value: {str(e)}")
-        return None
-
-
 def get_classification_type(item_class):
     if not item_class:
         return None
@@ -359,7 +275,6 @@ def get_classification_type(item_class):
         return 'm'
     return None
 
-
 def map_item_class_to_dept_label(item_class):
     if not item_class:
         return None
@@ -378,7 +293,6 @@ def map_item_class_to_dept_label(item_class):
         return "Mens"
     return None
 
-
 def get_dept_value(item_class):
     if not item_class:
         return ""
@@ -395,7 +309,6 @@ def get_dept_value(item_class):
         return "MEN"
     return ""
 
-
 def modify_collection(collection, item_class):
     if not item_class:
         return collection
@@ -406,25 +319,20 @@ def modify_collection(collection, item_class):
         return f"{collection} G"
     return collection
 
-
 def clean_item_name_english(name: str) -> str:
     if not isinstance(name, str):
         return ""
     text = name.strip()
-    lower = text.lower()
-    prefixes = ["xxxxx", "xxxxx", "xxxxx", "xxxxx", "xxxxx", "xxxxx", "xxxxx", "xxxxx"]
-    for p in prefixes:
-        if lower.startswith(p):
-            cut_len = len(p)
-            text = text[cut_len:].strip(" -_,./").strip()
+    prefixes_to_remove = ["KIDS", "BABY", "WOMEN", "MEN", "TEENS"]
+    for p in prefixes_to_remove:
+        if text.upper().startswith(p):
+            text = text[len(p):].strip(" -_.,/").strip()
             break
     return text.upper()
 
-
 # ================================================================
-# PART 3 — PDF EXTRACTION
+# PDF EXTRACTION
 # ================================================================
-
 def extract_colour_from_pdf_pages(pages_text):
     for txt in pages_text:
         m = re.search(r"Colour.*?\n.*?\n\s*([A-Za-z ]+)\s+[0-9]{2}-[0-9]{4}", txt, re.IGNORECASE | re.DOTALL)
@@ -441,10 +349,7 @@ def extract_colour_from_pdf_pages(pages_text):
                     name = line.split()[0:-1]
                     if name:
                         return " ".join(name).upper()
-    st.warning("Colour not found in PDF. Enter colour manually:")
-    manual = st.text_input("Colour (e.g. WHITE):", key="manual_colour_fix")
-    return manual.strip().upper() if manual else "UNKNOWN"
-
+    return "UNKNOWN"
 
 def extract_order_id_only(file):
     pos = None
@@ -471,7 +376,6 @@ def extract_order_id_only(file):
         pass
     m = re.search(r"Order\s*-\s*ID\s*\.{2,}\s*([A-Z0-9_+-]+)", page1_text, re.IGNORECASE)
     return m.group(1).strip() if m else None
-
 
 def extract_data_from_pdf(file):
     try:
@@ -586,20 +490,19 @@ def extract_data_from_pdf(file):
         st.error(f"PDF error: {str(e)}")
         return None
 
-
 # ================================================================
-# PART 4 — MAIN PROCESSOR
+# MAIN PROCESSOR (SIMPLIFIED)
 # ================================================================
-
 def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
-    """Main pipeline: parse PDF, build DF, apply UI choices, export CSV."""
+    """Main pipeline: parse PDF, build DF, export CSV."""
     
     translations_df = load_product_translations()
     material_translations_df = load_material_translations()
     care_data = load_care_composition_data()
     comp_translations_df = load_component_translations()
 
-    if not (uploaded_pdf and not translations_df.empty):
+    if not uploaded_pdf:
+        st.error("No PDF uploaded")
         return
 
     result_data = extract_data_from_pdf(uploaded_pdf)
@@ -607,10 +510,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         return
 
     df = pd.DataFrame(result_data)
-    first_row = result_data[0] if len(result_data) > 0 else {}
-    pdf_item_class = first_row.get("Item_classification", "")
-    pdf_item_name_en = (first_row.get("Item_name_EN") or "").strip()
-
+    
     if extra_order_ids:
         try:
             df['Order_ID'] = df['Order_ID'].astype(str) + "+" + extra_order_ids
@@ -618,66 +518,14 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
             pass
 
     # ============================================================
-    # UI Controls (Department, Product, Washing, PLN)
-    # ============================================================
-    c1, c2, c3, c4 = st.columns(4)
-
-    depts = translations_df['DEPARTMENT'].dropna().unique().tolist()
-    default_dept_label = map_item_class_to_dept_label(pdf_item_class)
-    default_dept_index = 0
-    if default_dept_label:
-        for i, d in enumerate(depts):
-            if str(d).strip().lower() == str(default_dept_label).strip().lower():
-                default_dept_index = i
-                break
-
-    with c1:
-        selected_dept = st.selectbox("Select Department", options=depts, index=default_dept_index, key="ui_dept")
-
-    filtered = translations_df[translations_df['DEPARTMENT'] == selected_dept]
-    products = filtered['PRODUCT_NAME'].dropna().unique().tolist()
-    default_product_index = 0
-    if pdf_item_name_en:
-        for i, p in enumerate(products):
-            if str(p).strip().lower() == pdf_item_name_en.strip().lower():
-                default_product_index = i
-                break
-
-    with c2:
-        product_type = st.selectbox("Select Product Type", options=products, index=default_product_index, key="ui_product")
-
-    washing_options = list(WASHING_CODES.keys())
-    washing_default_index = washing_options.index('9') if '9' in washing_options else 0
-    with c3:
-        washing_code_key = st.selectbox("Select Washing Code", options=washing_options, index=washing_default_index, key="ui_wash")
-
-    with c4:
-        pln_price_raw = st.text_input("Enter PLN Price", key="ui_pln_price")
-
-    pln_price = None
-    if pln_price_raw.strip():
-        try:
-            pln_price = float(pln_price_raw.replace(",", "."))
-            if pln_price < 0:
-                st.error("Price can't be negative.")
-                pln_price = None
-        except ValueError:
-            st.error("Please enter a valid number like 12.50 or 12,50")
-            pln_price = None
-
-    # ============================================================
-    # MATERIAL COMPOSITION UI (Clean Simple + Advanced Version)
+    # MATERIAL COMPOSITION UI (Simplified)
     # ============================================================
     st.markdown("### 🧵 Material Composition (%)")
     
     materials_df = care_data.get("materials", pd.DataFrame())
     comp_instructions_df = care_data.get("comp_instructions", pd.DataFrame())
     
-    # ------------------------------------------------------------
-    # Helper Functions for Translations
-    # ------------------------------------------------------------
     def get_material_all_languages(mat_name, pct):
-        """Get material with percentage in all languages"""
         if materials_df.empty or not mat_name:
             return f"{pct}% {mat_name}"
         
@@ -695,7 +543,6 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         return f"{pct}% {' / '.join(translations)}"
     
     def get_component_name_translations(comp_name):
-        """Get component name in all available languages"""
         if comp_translations_df.empty:
             return comp_name
         
@@ -713,7 +560,6 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         return " / ".join(translations)
     
     def get_instruction_all_languages(inst_text):
-        """Get composition instruction in all languages"""
         if not inst_text or comp_instructions_df.empty:
             return ""
         
@@ -731,7 +577,6 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         return " / ".join(translations)
     
     def get_care_instruction_all_languages(inst_text, care_instructions_df):
-        """Get care instruction in all languages"""
         if not inst_text or care_instructions_df.empty:
             return ""
         
@@ -748,9 +593,6 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         
         return " / ".join(translations)
     
-    # ------------------------------------------------------------
-    # Material Options
-    # ------------------------------------------------------------
     materials_options = []
     if not materials_df.empty:
         en_col = materials_df.columns[0]
@@ -758,31 +600,19 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     if not materials_options:
         materials_options = ["Cotton", "Polyester", "Elastane", "Nylon", "Viscose", "Wool"]
     
-    # ------------------------------------------------------------
-    # Composition Instructions Options
-    # ------------------------------------------------------------
     comp_inst_options = [""]
     if not comp_instructions_df.empty:
         en_col = comp_instructions_df.columns[0]
         comp_inst_options.extend(comp_instructions_df[en_col].dropna().astype(str).tolist())
     
-    # ------------------------------------------------------------
-    # Component Options
-    # ------------------------------------------------------------
     component_options = []
     if not comp_translations_df.empty:
         component_options = comp_translations_df["EN"].dropna().astype(str).tolist()
     if not component_options:
         component_options = ["Main fabric", "Outer fabric", "Lining", "Pocket bag", "Collar", "Cuff"]
     
-    # ------------------------------------------------------------
-    # Mode Toggle
-    # ------------------------------------------------------------
     use_advanced_mode = st.toggle("🔧 Advanced Mode (Multiple Components)", value=False)
     
-    # ------------------------------------------------------------
-    # Session State
-    # ------------------------------------------------------------
     if "composition_blocks" not in st.session_state:
         st.session_state.composition_blocks = []
     
@@ -804,19 +634,14 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
                 parts.append(mat_text)
         return "\n\n".join(parts)
     
-    # Output variables
     final_composition_text = ""
     selected_materials = []
-    cotton_value = ""
     components_data = []
     material_compositions = {}
     simple_comp_inst = ""
     
-    # Render blocks
     for block_idx, block in enumerate(st.session_state.composition_blocks):
-        
         with st.container(border=True):
-            
             top1, top2 = st.columns([5, 1])
             
             with top1:
@@ -909,7 +734,6 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
                 st.code(full_preview, language="text")
             
             if valid_materials and total_pct == 100:
-                st.write(f"Debug - Adding component: {block['component_name']} with {len(valid_materials)} materials")  # ডিবাগ
                 components_data.append({
                     "name": block["component_name"],
                     "comp_inst": block.get("comp_inst", "") if use_advanced_mode else "",
@@ -939,15 +763,12 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
             key="simple_comp_inst_global"
         )
     
-    # Build final composition text
     composition_lines = []
-    
     for comp in components_data:
         material_text = build_material_line(comp["materials"], use_translation=True)
         
         if use_advanced_mode:
             comp_translated = get_component_name_translations(comp["name"])
-            # এখানে পরিবর্তন: ":" এর পর "\n\n" যোগ করুন
             line = f"{comp_translated}:\n\n{material_text}"
             
             if comp.get("comp_inst"):
@@ -963,10 +784,8 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         
         composition_lines.append(line)
     
-    # কম্পোনেন্টগুলোর মধ্যে ২ লাইন গ্যাপ
     final_composition_text = "\n\n".join(composition_lines)
     
-    # Build material compositions for AL/MK
     if selected_materials and not material_translations_df.empty:
         for lang in ['AL', 'MK']:
             comp_parts = []
@@ -980,17 +799,6 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
                         comp_parts.append(f"{mat['pct']}% {t['translation'].iloc[0]}")
             if comp_parts:
                 material_compositions[lang] = ", ".join(comp_parts)
-    
-    # Cotton detection
-    if len(selected_materials) == 1 and selected_materials[0].lower() == "cotton":
-        all_cotton = True
-        for comp in components_data:
-            comp_total = sum(m["pct"] for m in comp["materials"])
-            if comp_total != 100 or comp["materials"][0]["mat"].lower() != "cotton":
-                all_cotton = False
-                break
-        if all_cotton:
-            cotton_value = "Y"
     
     if final_composition_text:
         st.markdown("### 📋 Final Composition (All Languages)")
@@ -1045,191 +853,127 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
             st.write(care_inst_translated)
     
     # ============================================================
-    # DataFrame enrichment
+    # Build Final DataFrame
     # ============================================================
+    # Use default washing code
+    washing_code_key = '9'
+    
+    # Get product info from PDF
+    first_row = df.iloc[0] if not df.empty else {}
+    pdf_item_class = first_row.get("Item_classification", "")
+    pdf_item_name_en = first_row.get("Item_name_EN", "")
+    
+    # Map department
+    selected_dept = map_item_class_to_dept_label(pdf_item_class) or "UNKNOWN"
+    
+    # Get product translations
+    product_type = pdf_item_name_en if pdf_item_name_en else "UNKNOWN"
+    
     df['Dept'] = df['Item_classification'].apply(get_dept_value)
-    if cotton_value == "Y":
-        df['Cotton'] = cotton_value
-    elif 'Cotton' in df.columns:
+    
+    if 'Cotton' in df.columns:
         df = df.drop(columns=['Cotton'])
     
     df['Collection'] = df.apply(lambda r: modify_collection(r['Collection'], r['Item_classification']), axis=1)
     
-    # Format product translations with AL/MK compositions
-    def format_product_translations(product_name, translation_row, material_compositions=None, components_data=None, comp_translations_df=None, use_advanced_mode=False):
-        """Build multilingual product description with component names in AL/MK"""
+    # Simple product name formatting
+    def format_product_name_simple(product_name, translation_row):
+        language_order = ['EN', 'AL', 'BG', 'BiH', 'CZ', 'DE', 'EE', 'ES', 'GR', 'HR', 'HU', 
+                         'IT', 'LT', 'LV', 'MK', 'PL', 'PT', 'RO', 'RS', 'SI', 'SK', 'UA']
         
-        # সঠিক ভাষার অর্ডার
-        language_order = [
-            'AL', 'BG', 'BiH', 'CZ', 'DE', 'EE', 'ES', 'GR', 'HR', 'HU', 
-            'IT', 'LT', 'LV', 'MK', 'PL', 'PT', 'RO', 'RS', 'SI', 'SK', 'UA'
-        ]
-        
-        # Country suffixes
-        country_suffixes = {
-            'BiH': " Sastav materijala na ušivenoj etiketi.",
-            'RS': " Sastav materijala nalazi se na ušivenoj etiketi.",
-        }
-        
-        result = {}
-        
+        result = []
         for lang in language_order:
-            base_text = translation_row.get(lang, product_name)
-            
-            # AL এবং MK এর জন্য কম্পোজিশন যোগ করুন
-            if lang in ['AL', 'MK']:
-                if use_advanced_mode and components_data and comp_translations_df is not None:
-                    # ADVANCED MODE: কম্পোনেন্টের নাম + কম্পোজিশন
-                    comp_parts = []
-                    for comp in components_data:
-                        # কম্পোনেন্টের নাম ট্রান্সলেট করুন
-                        comp_name = comp.get("name", "")
-                        comp_translated = comp_name
-                        if not comp_translations_df.empty:
-                            row = comp_translations_df[comp_translations_df['EN'].astype(str).str.strip() == comp_name]
-                            if not row.empty:
-                                comp_translated = row.iloc[0].get(lang, comp_name)
-                        
-                        # ম্যাটেরিয়াল কম্পোজিশন
-                        materials_parts = []
-                        for mat in comp.get("materials", []):
-                            if mat.get("mat") and mat.get("pct", 0) > 0:
-                                # ম্যাটেরিয়াল ট্রান্সলেশন
-                                mat_translated = mat["mat"]
-                                if material_compositions is None:
-                                    # Fallback: use material_translations_df
-                                    t = material_translations_df[
-                                        (material_translations_df['material'] == mat['mat']) & 
-                                        (material_translations_df['language'] == lang)
-                                    ]
-                                    if not t.empty:
-                                        mat_translated = t['translation'].iloc[0]
-                                materials_parts.append(f"{mat['pct']}% {mat_translated}")
-                        
-                        materials_text = ", ".join(materials_parts)
-                        comp_parts.append(f"{comp_translated} {materials_text}")
-                    
-                    if comp_parts:
-                        base_text = f"{base_text}: {', '.join(comp_parts)}"
-                elif material_compositions and lang in material_compositions:
-                    # SIMPLE MODE: শুধু ম্যাটেরিয়াল (কম্পোনেন্টের নাম ছাড়া)
-                    comp_text = material_compositions.get(lang, "")
-                    if comp_text:
-                        base_text = f"{base_text}: {comp_text}"
-            
-            # ES এর জন্য / দিয়ে Catalan যোগ করুন
-            elif lang == 'ES':
-                es_ca_text = translation_row.get('ES_CA', "")
-                if es_ca_text and pd.notna(es_ca_text):
-                    base_text = f"{base_text} / {es_ca_text}"
-            
-            # Country suffixes যোগ করুন
-            if lang in country_suffixes:
-                if not base_text.endswith('.'):
-                    base_text += "."
-                base_text += country_suffixes[lang]
-            
-            result[lang] = base_text
+            text = translation_row.get(lang, product_name)
+            result.append(f"|{lang}| {text}")
         
-        # EN প্রথমে বসবে
-        formatted = [f"|EN| {translation_row.get('EN', product_name)}"]
-        
-        # বাকি ভাষাগুলো অর্ডার অনুযায়ী যোগ হবে
-        for lang in language_order:
-            formatted.append(f"|{lang}| {result.get(lang, '')}")
-        
-        return " ".join(formatted)
+        return " ".join(result)
     
-    product_row = filtered[filtered['PRODUCT_NAME'] == product_type]
-    if not product_row.empty:
-        df['product_name'] = format_product_translations(
-            product_type, 
-            product_row.iloc[0], 
-            material_compositions,
-            components_data,
-            comp_translations_df,
-            use_advanced_mode  # এইটা যোগ করুন
-        )
-    else:
-        df['product_name'] = ""
+    # Try to get translations
+    product_name_final = product_type
+    if not translations_df.empty:
+        # Try to find matching department and product
+        dept_filtered = translations_df[translations_df['DEPARTMENT'] == selected_dept]
+        if not dept_filtered.empty:
+            product_row = dept_filtered[dept_filtered['PRODUCT_NAME'] == product_type]
+            if not product_row.empty:
+                product_name_final = format_product_name_simple(product_type, product_row.iloc[0])
     
     df['washing_code'] = WASHING_CODES[washing_code_key]
+    df["Item_name_English"] = df["Item_name_EN"].apply(clean_item_name_english)
+    
+    # Composition + Care combined
+    combined_care = ""
+    if final_composition_text and care_inst_translated:
+        combined_care = f"{final_composition_text}\n\n{care_inst_translated}"
+    elif final_composition_text:
+        combined_care = final_composition_text
+    elif care_inst_translated:
+        combined_care = care_inst_translated
+    
+    df['Composition_Care'] = combined_care
+    
+    # SKU Name
+    df['SKU_Name'] = df['Colour_SKU'].apply(lambda x: re.sub(r".*SKU\s*", "", x))
     
     # ============================================================
-    # PRICE LADDER + CSV EXPORT
+    # FINAL COLUMNS (Only these 11 columns)
     # ============================================================
-    if pln_price is not None:
-        currency_values = find_closest_price(pln_price)
-        if currency_values:
-            for cur in ['EUR', 'BGN', 'BAM', 'RON', 'CZK', 'UAH', 'MKD', 'RSD', 'HUF']:
-                df[cur] = currency_values.get(cur, "")
-            df['PLN'] = format_number(pln_price, 'PLN')
-            df["Item_name_English"] = df["Item_name_EN"].apply(clean_item_name_english)
-            
-            # Composition এবং Care Instructions একসাথে
-            combined_care = ""
-            if final_composition_text and care_inst_translated:
-                combined_care = f"{final_composition_text}\n\n{care_inst_translated}"
-            elif final_composition_text:
-                combined_care = final_composition_text
-            elif care_inst_translated:
-                combined_care = care_inst_translated
-            
-            df['Composition_Care'] = combined_care
-            
-            # SKU Name কলাম
-            df['SKU_Name'] = df['Colour_SKU'].apply(lambda x: re.sub(r".*SKU\s*", "", x))
-            # অথবা শুধু SKU নাম্বার চাইলে:
-            # df['SKU_Name'] = df['Colour_SKU'].apply(lambda x: re.sub(r".*SKU\s*", "", x))
-
-            final_cols = [
-                "Order_ID", "Style", "Colour", "Supplier_product_code", "Item_classification",
-                "Supplier_name", "today_date", "Collection", "Colour_SKU", "Style_Merch_Season",
-                "Batch", "barcode", "washing_code", "EUR", "BGN", "BAM", "PLN", "RON", "CZK",
-                "UAH", "MKD", "RSD", "HUF", "product_name", "Dept", "Item_name_English", "Season",
-                "Composition_Care", "SKU_Name"  # নতুন কলাম
-            ]
-            
-            # Optionally include Cotton column
-            if 'Cotton' in df.columns and 'Cotton' not in final_cols:
-                final_cols.append("Cotton")
-            
-            for col in final_cols:
-                if col not in df.columns:
-                    df[col] = ""
-            
-            st.success("✅ Done! Product data processed successfully.")
-            st.subheader("✏️ Edit Before Download")
-            edited_df = st.data_editor(df[final_cols])
-            
-            # ... rest of the code (CSV export)
-            
-            csv_buffer = StringIO()
-            writer = pycsv.writer(csv_buffer, delimiter=';', quoting=pycsv.QUOTE_ALL)
-            writer.writerow(final_cols)
-            for row in edited_df.itertuples(index=False):
-                writer.writerow(row)
-            
-            first_row_df = df.iloc[0]
-            season_val = first_row_df.get("Season", "UNKNOWN").upper()
-            all_skus = df['Colour_SKU'].apply(lambda x: re.sub(r".*SKU\s*", "", x)).tolist()
-            sku_val = "_".join(all_skus) if all_skus else "UNKNOWN"
-            supplier_code = first_row_df.get("Supplier_product_code", "UNKNOWN")
-            style_val = first_row_df.get("Style", "UNKNOWN")
-            custom_filename = f"PEPCO_{season_val}_{sku_val}_Swingtag {supplier_code}_00_{style_val}.csv"
-            
-            st.download_button(
-                "📥 Download CSV",
-                csv_buffer.getvalue().encode('utf-8-sig'),
-                file_name=custom_filename,
-                mime="text/csv"
-            )
-        else:
-            st.warning("⚠️ Processing stopped - valid PLN price not found")
-
+    final_cols = [
+        "Order_ID",
+        "Style",
+        "Colour",
+        "Supplier_product_code",
+        "Item_classification",
+        "Supplier_name",
+        "today_date",
+        "barcode",
+        "washing_code",
+        "Composition_Care",
+        "SKU_Name"
+    ]
+    
+    # Ensure all columns exist
+    for col in final_cols:
+        if col not in df.columns:
+            df[col] = ""
+    
+    # Keep only final columns
+    df = df[final_cols]
+    
+    st.success("✅ Done! Product data processed successfully.")
+    st.subheader("✏️ Edit Before Download")
+    edited_df = st.data_editor(df)
+    
+    # ============================================================
+    # CSV EXPORT
+    # ============================================================
+    csv_buffer = StringIO()
+    writer = pycsv.writer(csv_buffer, delimiter=';', quoting=pycsv.QUOTE_ALL)
+    writer.writerow(final_cols)
+    
+    for row in edited_df.itertuples(index=False):
+        clean_row = tuple(str(x) if pd.notna(x) else "" for x in row)
+        writer.writerow(clean_row)
+    
+    # Generate filename
+    if not df.empty:
+        first_row_df = df.iloc[0]
+        sku_val = first_row_df.get("SKU_Name", "UNKNOWN")
+        supplier_code = first_row_df.get("Supplier_product_code", "UNKNOWN")
+        style_val = first_row_df.get("Style", "UNKNOWN")
+        custom_filename = f"PEPCO_{sku_val}_Swingtag_{supplier_code}_00_{style_val}.csv"
+    else:
+        custom_filename = "PEPCO_export.csv"
+    
+    st.download_button(
+        "📥 Download CSV",
+        csv_buffer.getvalue().encode('utf-8-sig'),
+        file_name=custom_filename,
+        mime="text/csv"
+    )
 
 # ================================================================
-#  PEPCO SECTION (Uploader + Reset)
+# PEPCO SECTION (Uploader + Reset)
 # ================================================================
 def pepco_section():
     st.subheader("📄 PEPCO Data Processing")
@@ -1241,7 +985,7 @@ def pepco_section():
     with cols[0]:
         def _reset_all():
             for k in list(st.session_state.keys()):
-                if k.startswith(("ui_", "mat_", "pepco_", "comp_", "care_", "colour_", "simple_", "composition_")):
+                if k.startswith(("mat_", "pepco_", "comp_", "care_", "simple_", "composition_", "manual_colour_", "new_care_inst_select")):
                     st.session_state.pop(k, None)
             st.session_state.uploader_key += 1
         
@@ -1280,9 +1024,8 @@ def pepco_section():
         concatenated_ids = "+".join(other_ids) if other_ids else ""
         process_pepco_pdf(primary_pdf, extra_order_ids=concatenated_ids)
 
-
 # ================================================================
-#  HEADER RENDER
+# HEADER RENDER
 # ================================================================
 def render_header():
     left, _ = st.columns([3, 10], vertical_alignment="center")
@@ -1294,9 +1037,8 @@ def render_header():
         else:
             st.markdown("<div style='font-size:40px'>🧾</div>", unsafe_allow_html=True)
 
-
 # ================================================================
-#  MAIN APP
+# MAIN APP
 # ================================================================
 def main():
     st.markdown(THEME_CSS, unsafe_allow_html=True)
@@ -1310,7 +1052,6 @@ def main():
     
     st.markdown("---")
     st.caption("This app developed by Ovi")
-
 
 if __name__ == "__main__":
     main()
