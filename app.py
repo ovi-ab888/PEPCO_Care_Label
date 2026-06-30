@@ -33,6 +33,10 @@ THEME_CSS = """
   --input-br: rgba(255,255,255,.25);
   --txt:      #E9ECF6;
   --muted:    #C2C8DF;
+  --primary:  #4F8BF9;
+  --success:  #00C853;
+  --warning:  #FFC107;
+  --danger:   #FF1744;
 }
 
 .block-container{max-width:1120px; padding-top:1rem; padding-bottom:3rem;}
@@ -50,57 +54,225 @@ div[data-testid="stVerticalBlock"]:has(> div[data-testid="stDataEditor"]){
   box-shadow:0 1px 8px rgba(0,0,0,.12);
 }
 
-label, .stMultiSelect label, .stSelectbox label, .stNumberInput label, .stTextInput label{
-  color:var(--txt)!important; font-weight:500;
+/* Section Headers with Icons */
+.section-header {
+  background: linear-gradient(135deg, #4F8BF9 0%, #6C5CE7 100%);
+  padding: 12px 20px;
+  border-radius: 12px;
+  color: white !important;
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 15px rgba(79, 139, 249, 0.3);
 }
 
-input, textarea{
-  color:var(--txt)!important;
-  background:var(--input-bg)!important;
-  border-color:var(--input-br)!important;
-}
-input::placeholder, textarea::placeholder{
-  color:var(--muted)!important; opacity:.95;
+.section-header .icon {
+  font-size: 1.4rem;
 }
 
-div[data-baseweb="select"] > div{
-  background:var(--input-bg)!important;
-  border-color:var(--input-br)!important;
-  border-radius:12px!important;
-}
-div[data-baseweb="select"] input{ color:var(--txt)!important; }
-div[data-baseweb="select"] svg{ opacity:.9; }
-
-div[data-testid="stNumberInput"] input{
-  color:var(--txt)!important;
-  background:var(--input-bg)!important;
-  border-color:var(--input-br)!important;
+/* Composition Block */
+.composition-block {
+  background: rgba(255,255,255,0.03) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 12px !important;
+  padding: 16px !important;
+  margin-bottom: 12px !important;
+  transition: all 0.3s ease;
 }
 
-.stButton > button{
-  border-radius:12px; padding:.55rem 1rem;
+.composition-block:hover {
+  border-color: rgba(79, 139, 249, 0.4) !important;
+  background: rgba(255,255,255,0.06) !important;
 }
 
-[data-testid="stTable"] td,[data-testid="stTable"] th{
-  padding:.45rem .6rem;
+.stButton > button {
+  border-radius: 12px;
+  padding: .55rem 1rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.stButton > button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(79, 139, 249, 0.3);
+}
+
+div[data-baseweb="select"] > div {
+  background: var(--input-bg)!important;
+  border-color: var(--input-br)!important;
+  border-radius: 10px!important;
+}
+
+div[data-baseweb="select"]:hover > div {
+  border-color: #4F8BF9 !important;
+}
+
+div[data-testid="stNumberInput"] input {
+  color: var(--txt)!important;
+  background: var(--input-bg)!important;
+  border-color: var(--input-br)!important;
+  border-radius: 10px!important;
+}
+
+div[data-testid="stNumberInput"] input:focus {
+  border-color: #4F8BF9 !important;
+  box-shadow: 0 0 0 2px rgba(79, 139, 249, 0.2);
+}
+
+.stCodeBlock {
+  background: rgba(0,0,0,0.3) !important;
+  border-radius: 10px !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  padding: 12px !important;
+}
+
+.streamlit-expanderHeader {
+  background: rgba(255,255,255,0.03) !important;
+  border-radius: 10px !important;
+  font-weight: 500 !important;
+}
+
+.streamlit-expanderHeader:hover {
+  background: rgba(255,255,255,0.06) !important;
+}
+
+label, .stMultiSelect label, .stSelectbox label, .stNumberInput label, .stTextInput label {
+  color: var(--txt)!important;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.stAlert {
+  border-radius: 10px !important;
+  border: none !important;
+}
+
+.stAlert[data-baseweb="notification"]:has(svg[data-icon="check"]) {
+  background: rgba(0, 200, 83, 0.1) !important;
+  border-left: 4px solid #00C853 !important;
+}
+
+.stAlert[data-baseweb="notification"]:has(svg[data-icon="alert-triangle"]) {
+  background: rgba(255, 193, 7, 0.1) !important;
+  border-left: 4px solid #FFC107 !important;
+}
+
+.stAlert[data-baseweb="notification"]:has(svg[data-icon="x"]) {
+  background: rgba(255, 23, 68, 0.1) !important;
+  border-left: 4px solid #FF1744 !important;
+}
+
+.stAlert[data-baseweb="notification"]:has(svg[data-icon="info"]) {
+  background: rgba(79, 139, 249, 0.1) !important;
+  border-left: 4px solid #4F8BF9 !important;
+}
+
+div[data-testid="stFileUploader"] {
+  border: 2px dashed rgba(255,255,255,0.15) !important;
+  border-radius: 14px !important;
+  padding: 20px !important;
+  transition: all 0.3s ease;
+}
+
+div[data-testid="stFileUploader"]:hover {
+  border-color: #4F8BF9 !important;
+  background: rgba(79, 139, 249, 0.05) !important;
+}
+
+div[data-testid="stDataEditor"] {
+  background: rgba(255,255,255,0.02) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+
+div[data-testid="stDataFrameContainer"] {
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+
+.stDownloadButton > button {
+  background: linear-gradient(135deg, #00C853, #00E676) !important;
+  color: white !important;
+  border: none !important;
+  font-weight: 600 !important;
+  padding: 0.6rem 2rem !important;
+  border-radius: 12px !important;
+}
+
+.stDownloadButton > button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 200, 83, 0.4) !important;
+}
+
+button:has(> span:contains("🗑️")),
+button:has(> span:contains("❌")) {
+  background: rgba(255, 23, 68, 0.1) !important;
+  border: 1px solid rgba(255, 23, 68, 0.2) !important;
+  color: #FF1744 !important;
+  border-radius: 8px !important;
+  padding: 0.3rem 0.7rem !important;
+  font-size: 0.9rem !important;
+}
+
+button:has(> span:contains("🗑️")):hover,
+button:has(> span:contains("❌")):hover {
+  background: rgba(255, 23, 68, 0.2) !important;
+  transform: scale(1.05);
+}
+
+button:has(> span:contains("➕ Add")) {
+  background: rgba(79, 139, 249, 0.1) !important;
+  border: 1px solid rgba(79, 139, 249, 0.3) !important;
+  color: #4F8BF9 !important;
+  border-radius: 10px !important;
+  font-weight: 500 !important;
+}
+
+button:has(> span:contains("➕ Add")):hover {
+  background: rgba(79, 139, 249, 0.2) !important;
+  transform: translateY(-1px);
+}
+
+button:has(> span:contains("Remove")) {
+  background: rgba(255, 23, 68, 0.08) !important;
+  border: 1px solid rgba(255, 23, 68, 0.15) !important;
+  color: #FF1744 !important;
+  border-radius: 8px !important;
+  font-size: 0.8rem !important;
+  padding: 0.2rem 0.8rem !important;
+}
+
+.section-divider {
+  border: none;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
+  margin: 24px 0;
+}
+
+@media (max-width: 768px) {
+  .section-header {
+    font-size: 0.95rem;
+    padding: 10px 16px;
+  }
 }
 </style>
 """
 
 # ================================================================
-# PASSWORD CHECK SYSTEM (MULTIPLE PASSWORDS SUPPORT)
+# PASSWORD CHECK SYSTEM (MULTIPLE PASSWORDS)
 # ================================================================
 def check_password():
     """Password gate supporting multiple passwords from secrets."""
     expected_passwords = None
 
     try:
-        # সিক্রেটস থেকে পাসওয়ার্ড লিস্ট নিন
         expected_passwords = st.secrets.get("app_passwords", None)
     except Exception:
         expected_passwords = None
 
-    # এনভায়রনমেন্ট ভেরিয়েবল থেকে নিন (একটি পাসওয়ার্ড)
     if expected_passwords is None:
         env_pass = os.environ.get("PEPCO_APP_PASSWORD")
         if env_pass:
@@ -112,7 +284,6 @@ def check_password():
 
     def _password_entered():
         entered = st.session_state.get("password", "")
-        # চেক করুন এন্টার করা পাসওয়ার্ড লিস্টের কোনো একটির সাথে মেলে কিনা
         if entered in expected_passwords:
             st.session_state["password_correct"] = True
             try:
@@ -142,7 +313,7 @@ WASHING_CODES = {
 }
 
 # ================================================================
-# DATA LOADERS (শুধু প্রয়োজনীয়)
+# DATA LOADERS
 # ================================================================
 @st.cache_data(ttl=600)
 def load_care_composition_data():
@@ -224,7 +395,7 @@ def load_material_translations():
         return pd.DataFrame(fallback)
 
 # ================================================================
-# PDF EXTRACTION (শুধু প্রয়োজনীয়)
+# PDF EXTRACTION
 # ================================================================
 def extract_colour_from_pdf_pages(pages_text):
     for txt in pages_text:
@@ -284,7 +455,6 @@ def extract_data_from_pdf(file):
         full_text = "\n".join(pages_text)
         page1 = pages_text[0]
 
-        # Item name EN (শুধু SKU_Name এর জন্য প্রয়োজন)
         m_item = re.search(r"Item\s*name\s*English\s*[:\.]{1,}\s*(.+)", full_text, re.IGNORECASE)
         if not m_item:
             m_item = re.search(r"Item\s*name\s*[:\.]{1,}\s*(.+?)\n", full_text, re.IGNORECASE)
@@ -343,7 +513,7 @@ def extract_data_from_pdf(file):
                 "today_date": datetime.today().strftime('%d-%m-%Y'),
                 "Colour_SKU": f"{colour} • SKU {sku}",
                 "barcode": barcode,
-                "Item_name_EN": item_name_en or ""  # SKU_Name এর জন্য রাখা
+                "Item_name_EN": item_name_en or ""
             })
         return results
     except Exception as e:
@@ -351,7 +521,7 @@ def extract_data_from_pdf(file):
         return None
 
 # ================================================================
-# MAIN PROCESSOR (সরলীকৃত)
+# MAIN PROCESSOR
 # ================================================================
 def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     """Main pipeline: parse PDF, build DF, export CSV."""
@@ -379,7 +549,13 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     # ============================================================
     # MATERIAL COMPOSITION UI
     # ============================================================
-    st.markdown("### 🧵 Material Composition (%)")
+    st.markdown("""
+    <div class="section-header">
+        <span class="icon">🧵</span>
+        Material Composition (%)
+        <span style="margin-left:auto;font-size:0.8rem;opacity:0.7;">Add materials and percentages</span>
+    </div>
+    """, unsafe_allow_html=True)
     
     materials_df = care_data.get("materials", pd.DataFrame())
     comp_instructions_df = care_data.get("comp_instructions", pd.DataFrame())
@@ -500,108 +676,111 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     simple_comp_inst = ""
     
     for block_idx, block in enumerate(st.session_state.composition_blocks):
-        with st.container(border=True):
-            top1, top2 = st.columns([5, 1])
-            
-            with top1:
-                if use_advanced_mode:
-                    current_name = block.get("component_name", "Main fabric")
-                    name_index = component_options.index(current_name) if current_name in component_options else 0
-                    block["component_name"] = st.selectbox(
-                        f"Component Name #{block_idx + 1}",
-                        options=component_options,
-                        index=name_index,
-                        key=f"comp_name_{block_idx}"
-                    )
-                else:
-                    st.markdown("#### Simple Composition")
-            
-            with top2:
-                if len(st.session_state.composition_blocks) > 1:
-                    st.write("")
-                    st.write("")
-                    if st.button("🗑️", key=f"remove_block_{block_idx}"):
-                        st.session_state.composition_blocks.pop(block_idx)
-                        st.rerun()
-            
+        st.markdown('<div class="composition-block">', unsafe_allow_html=True)
+        
+        top1, top2 = st.columns([5, 1])
+        
+        with top1:
             if use_advanced_mode:
-                inst_idx = comp_inst_options.index(block.get("comp_inst", "")) if block.get("comp_inst", "") in comp_inst_options else 0
-                block["comp_inst"] = st.selectbox(
-                    "Composition Instructions (Optional)",
-                    options=comp_inst_options,
-                    index=inst_idx,
-                    key=f"comp_inst_{block_idx}"
+                current_name = block.get("component_name", "Main fabric")
+                name_index = component_options.index(current_name) if current_name in component_options else 0
+                block["component_name"] = st.selectbox(
+                    f"🧩 Component #{block_idx + 1}",
+                    options=component_options,
+                    index=name_index,
+                    key=f"comp_name_{block_idx}"
+                )
+            else:
+                st.markdown("#### 📋 Simple Composition")
+        
+        with top2:
+            if len(st.session_state.composition_blocks) > 1:
+                st.write("")
+                st.write("")
+                if st.button("🗑️ Remove", key=f"remove_block_{block_idx}"):
+                    st.session_state.composition_blocks.pop(block_idx)
+                    st.rerun()
+        
+        if use_advanced_mode:
+            inst_idx = comp_inst_options.index(block.get("comp_inst", "")) if block.get("comp_inst", "") in comp_inst_options else 0
+            block["comp_inst"] = st.selectbox(
+                "Composition Instructions (Optional)",
+                options=comp_inst_options,
+                index=inst_idx,
+                key=f"comp_inst_{block_idx}"
+            )
+        
+        st.markdown("#### Materials")
+        
+        for mat_idx, mat in enumerate(block["materials"]):
+            c1, c2, c3 = st.columns([3, 1.5, 0.7])
+            
+            with c1:
+                mat_options = [""] + materials_options
+                mat_index = mat_options.index(mat["mat"]) if mat["mat"] in mat_options else 0
+                mat["mat"] = st.selectbox(
+                    "Material",
+                    options=mat_options,
+                    index=mat_index,
+                    key=f"mat_{block_idx}_{mat_idx}"
                 )
             
-            st.markdown("#### Materials")
+            with c2:
+                mat["pct"] = st.number_input(
+                    "%",
+                    min_value=0,
+                    max_value=100,
+                    step=1,
+                    value=int(mat["pct"]),
+                    key=f"pct_{block_idx}_{mat_idx}"
+                )
             
-            for mat_idx, mat in enumerate(block["materials"]):
-                c1, c2, c3 = st.columns([3, 1.5, 0.7])
-                
-                with c1:
-                    mat_options = [""] + materials_options
-                    mat_index = mat_options.index(mat["mat"]) if mat["mat"] in mat_options else 0
-                    mat["mat"] = st.selectbox(
-                        "Material",
-                        options=mat_options,
-                        index=mat_index,
-                        key=f"mat_{block_idx}_{mat_idx}"
-                    )
-                
-                with c2:
-                    mat["pct"] = st.number_input(
-                        "%",
-                        min_value=0,
-                        max_value=100,
-                        step=1,
-                        value=int(mat["pct"]),
-                        key=f"pct_{block_idx}_{mat_idx}"
-                    )
-                
-                with c3:
-                    st.write("")
-                    if len(block["materials"]) > 1:
-                        if st.button("❌", key=f"remove_mat_{block_idx}_{mat_idx}"):
-                            block["materials"].pop(mat_idx)
-                            st.rerun()
+            with c3:
+                st.write("")
+                if len(block["materials"]) > 1:
+                    if st.button("❌", key=f"remove_mat_{block_idx}_{mat_idx}"):
+                        block["materials"].pop(mat_idx)
+                        st.rerun()
+        
+        if st.button("➕ Add Material", key=f"add_material_{block_idx}"):
+            block["materials"].append({"mat": "", "pct": 0})
+            st.rerun()
+        
+        valid_materials = [m for m in block["materials"] if m["mat"] and m["pct"] > 0]
+        total_pct = sum(m["pct"] for m in valid_materials)
+        
+        if total_pct == 100:
+            st.success(f"✅ Total = {total_pct}%")
+        elif total_pct < 100 and total_pct > 0:
+            st.warning(f"⚠️ Remaining = {100 - total_pct}%")
+        elif total_pct > 100:
+            st.error(f"❌ Exceeded by {total_pct - 100}%")
+        else:
+            st.info("📌 Enter material composition")
+        
+        if valid_materials and total_pct == 100:
+            preview_text = build_material_line(valid_materials, use_translation=True)
             
-            if st.button("➕ Add Material", key=f"add_material_{block_idx}"):
-                block["materials"].append({"mat": "", "pct": 0})
-                st.rerun()
-            
-            valid_materials = [m for m in block["materials"] if m["mat"] and m["pct"] > 0]
-            total_pct = sum(m["pct"] for m in valid_materials)
-            
-            if total_pct == 100:
-                st.success(f"✅ Total = {total_pct}%")
-            elif total_pct < 100 and total_pct > 0:
-                st.warning(f"⚠️ Remaining = {100 - total_pct}%")
-            elif total_pct > 100:
-                st.error(f"❌ Exceeded by {total_pct - 100}%")
+            if use_advanced_mode:
+                comp_translated = get_component_name_translations(block["component_name"])
+                full_preview = f"{comp_translated}: {preview_text}"
             else:
-                st.info("📌 Enter material composition")
+                full_preview = preview_text
             
-            if valid_materials and total_pct == 100:
-                preview_text = build_material_line(valid_materials, use_translation=True)
-                
-                if use_advanced_mode:
-                    comp_translated = get_component_name_translations(block["component_name"])
-                    full_preview = f"{comp_translated}: {preview_text}"
-                else:
-                    full_preview = preview_text
-                
-                st.code(full_preview, language="text")
+            st.code(full_preview, language="text")
+        
+        if valid_materials and total_pct == 100:
+            components_data.append({
+                "name": block["component_name"],
+                "comp_inst": block.get("comp_inst", "") if use_advanced_mode else "",
+                "materials": valid_materials.copy()
+            })
             
-            if valid_materials and total_pct == 100:
-                components_data.append({
-                    "name": block["component_name"],
-                    "comp_inst": block.get("comp_inst", "") if use_advanced_mode else "",
-                    "materials": valid_materials.copy()
-                })
-                
-                for m in valid_materials:
-                    if m["mat"] not in selected_materials:
-                        selected_materials.append(m["mat"])
+            for m in valid_materials:
+                if m["mat"] not in selected_materials:
+                    selected_materials.append(m["mat"])
+        
+        st.markdown('</div>', unsafe_allow_html=True)
     
     if use_advanced_mode:
         if len(st.session_state.composition_blocks) < 5:
@@ -659,11 +838,16 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
             if comp_parts:
                 material_compositions[lang] = ", ".join(comp_parts)
     
-    
     # ============================================================
     # CARE INSTRUCTIONS UI
     # ============================================================
-    st.markdown("### 🏷️ Care Instructions")
+    st.markdown("""
+    <div class="section-header">
+        <span class="icon">🏷️</span>
+        Care Instructions
+        <span style="margin-left:auto;font-size:0.8rem;opacity:0.7;">Select care labels</span>
+    </div>
+    """, unsafe_allow_html=True)
     
     care_instructions_df = care_data.get("care_instructions", pd.DataFrame())
     
@@ -676,25 +860,29 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         care_inst_options = care_instructions_df[en_col].dropna().astype(str).tolist()
     
     if st.session_state.care_inst_list:
-        st.write("**Selected Care Instructions:**")
+        st.markdown("#### 📋 Selected Care Instructions:")
         for idx, selected in enumerate(st.session_state.care_inst_list):
             col1, col2 = st.columns([5, 1])
             with col1:
-                st.write(f"• {selected}")
+                st.markdown(f"✅ {selected}")
             with col2:
-                if st.button("Remove", key=f"remove_care_{idx}"):
+                if st.button("✖", key=f"remove_care_{idx}"):
                     st.session_state.care_inst_list.pop(idx)
                     st.rerun()
     
     col_add_care, _ = st.columns([2, 3])
     with col_add_care:
-        new_care_inst = st.selectbox("Add Care Instruction", options=[""] + care_inst_options, key="new_care_inst_select")
-        if st.button("Add Care Instruction", key="add_care_inst_btn"):
+        new_care_inst = st.selectbox(
+            "➕ Add Care Instruction", 
+            options=[""] + care_inst_options, 
+            key="new_care_inst_select"
+        )
+        if st.button("➕ Add", key="add_care_inst_btn"):
             if new_care_inst and new_care_inst not in st.session_state.care_inst_list:
                 st.session_state.care_inst_list.append(new_care_inst)
                 st.rerun()
             elif new_care_inst in st.session_state.care_inst_list:
-                st.warning("This instruction already added!")
+                st.warning("⚠️ This instruction already added!")
     
     all_care_inst_translated = []
     for selected_care_inst in st.session_state.care_inst_list:
@@ -704,15 +892,12 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     
     care_inst_translated = "\n\n".join(all_care_inst_translated) if all_care_inst_translated else ""
     
-
-    
     # ============================================================
     # Build Final DataFrame
     # ============================================================
     washing_code_key = '9'
     df['washing_code'] = WASHING_CODES[washing_code_key]
     
-    # Composition + Care combined
     combined_care = ""
     if final_composition_text and care_inst_translated:
         combined_care = f"{final_composition_text}\n\n{care_inst_translated}"
@@ -722,13 +907,10 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         combined_care = care_inst_translated
     
     df['Composition_Care'] = combined_care
-    
-    # SKU Name from Colour_SKU
-    # SKU Name from Colour_SKU
     df['SKU_Name'] = df['Colour_SKU'].apply(lambda x: re.sub(r".*SKU\s*", "", x))
     
     # ============================================================
-    # FINAL COLUMNS (Define here first)
+    # FINAL COLUMNS
     # ============================================================
     final_cols = [
         "Order_ID",
@@ -744,12 +926,10 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         "SKU_Name"
     ]
     
-    # Ensure all columns exist
     for col in final_cols:
         if col not in df.columns:
             df[col] = ""
     
-    # Keep only final columns
     df = df[final_cols]
     
     st.success("✅ Done! Product data processed successfully.")
@@ -767,13 +947,9 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         clean_row = tuple(str(x) if pd.notna(x) else "" for x in row)
         writer.writerow(clean_row)
     
-    # Generate filename with all SKUs
     if not df.empty:
         first_row_df = df.iloc[0]
-        
-        # সব SKU নাম একত্রিত করুন
         all_skus = df['SKU_Name'].tolist()
-        # শুধু ইউনিক SKU রাখুন
         unique_skus = list(dict.fromkeys(all_skus))
         sku_str = "_".join(unique_skus)
         
@@ -790,7 +966,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         file_name=custom_filename,
         mime="text/csv"
     )
-    
+
 # ================================================================
 # PEPCO SECTION (Uploader + Reset)
 # ================================================================
