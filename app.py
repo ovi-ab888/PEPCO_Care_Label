@@ -683,14 +683,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
                         st.session_state.composition_blocks.pop(block_idx)
                         st.rerun()
             
-            if use_advanced_mode:
-                inst_idx = comp_inst_options.index(block.get("comp_inst", "")) if block.get("comp_inst", "") in comp_inst_options else 0
-                block["comp_inst"] = st.selectbox(
-                    "Composition Instructions (Optional)",
-                    options=comp_inst_options,
-                    index=inst_idx,
-                    key=f"comp_inst_{block_idx}"
-                )
+
             
             st.markdown("#### Materials")
             for mat_idx, mat in enumerate(block["materials"]):
@@ -767,12 +760,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         else:
             st.info("Maximum 5 components allowed")
     
-    if not use_advanced_mode:
-        simple_comp_inst = st.selectbox(
-            "Composition Instructions (Optional)",
-            options=comp_inst_options,
-            key="simple_comp_inst_global"
-        )
+
     
     # Build final composition
     composition_lines = []
@@ -781,10 +769,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         if use_advanced_mode:
             comp_translated = get_component_name_translations(comp["name"])
             line = f"{comp_translated}:\n\n{material_text}"
-            if comp.get("comp_inst"):
-                inst_text = get_instruction_all_languages(comp["comp_inst"])
-                if inst_text:
-                    line += f"\n\n(Composition Instructions: {inst_text})"
+
         else:
             line = material_text
             if simple_comp_inst:
