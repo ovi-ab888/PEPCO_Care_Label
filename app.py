@@ -718,24 +718,26 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     df['Composition_Care'] = combined_care
     
     # SKU Name from Colour_SKU
+    # SKU Name from Colour_SKU
     df['SKU_Name'] = df['Colour_SKU'].apply(lambda x: re.sub(r".*SKU\s*", "", x))
     
     # ============================================================
-    # FINAL COLUMNS (Only 11 columns)
+    # FINAL COLUMNS (Define here first)
     # ============================================================
-final_cols = [
-    "Order_ID",
-    "Style",
-    "Colour",
-    "Supplier_product_code",
-    "Item_classification",
-    "Supplier_name",
-    "today_date",
-    "barcode",
-    "washing_code",
-    "Composition_Care",
-    "SKU_Name"
-]
+    final_cols = [
+        "Order_ID",
+        "Style",
+        "Colour",
+        "Supplier_product_code",
+        "Item_classification",
+        "Supplier_name",
+        "today_date",
+        "barcode",
+        "washing_code",
+        "Composition_Care",
+        "SKU_Name"
+    ]
+    
     # Ensure all columns exist
     for col in final_cols:
         if col not in df.columns:
@@ -747,44 +749,42 @@ final_cols = [
     st.success("✅ Done! Product data processed successfully.")
     st.subheader("✏️ Edit Before Download")
     edited_df = st.data_editor(df)
-
-
-# ============================================================
-# CSV EXPORT (আপডেটেড ফাইল নাম)
-# ============================================================
-csv_buffer = StringIO()
-writer = pycsv.writer(csv_buffer, delimiter=';', quoting=pycsv.QUOTE_ALL)
-writer.writerow(final_cols)
-
-for row in edited_df.itertuples(index=False):
-    clean_row = tuple(str(x) if pd.notna(x) else "" for x in row)
-    writer.writerow(clean_row)
-
-# Generate filename with all SKUs
-if not df.empty:
-    first_row_df = df.iloc[0]
     
-    # সব SKU নাম একত্রিত করুন
-    all_skus = df['SKU_Name'].tolist()
-    # শুধু ইউনিক SKU রাখুন (যদি ডুপ্লিকেট থাকে)
-    unique_skus = list(dict.fromkeys(all_skus))
-    # আন্ডারস্কোর দিয়ে জয়েন করুন
-    sku_str = "_".join(unique_skus)
+    # ============================================================
+    # CSV EXPORT
+    # ============================================================
+    csv_buffer = StringIO()
+    writer = pycsv.writer(csv_buffer, delimiter=';', quoting=pycsv.QUOTE_ALL)
+    writer.writerow(final_cols)
     
-    supplier_code = first_row_df.get("Supplier_product_code", "UNKNOWN")
-    style_val = first_row_df.get("Style", "UNKNOWN")
+    for row in edited_df.itertuples(index=False):
+        clean_row = tuple(str(x) if pd.notna(x) else "" for x in row)
+        writer.writerow(clean_row)
     
-    # ফাইল নাম তৈরি করুন
-    custom_filename = f"PEPCO_{sku_str}_CareLabel_{supplier_code}_00_{style_val}.csv"
-else:
-    custom_filename = "PEPCO_export.csv"
-
-st.download_button(
-    "📥 Download CSV",
-    csv_buffer.getvalue().encode('utf-8-sig'),
-    file_name=custom_filename,
-    mime="text/csv"
-)
+    # Generate filename with all SKUs
+    if not df.empty:
+        first_row_df = df.iloc[0]
+        
+        # সব SKU নাম একত্রিত করুন
+        all_skus = df['SKU_Name'].tolist()
+        # শুধু ইউনিক SKU রাখুন
+        unique_skus = list(dict.fromkeys(all_skus))
+        sku_str = "_".join(unique_skus)
+        
+        supplier_code = first_row_df.get("Supplier_product_code", "UNKNOWN")
+        style_val = first_row_df.get("Style", "UNKNOWN")
+        
+        custom_filename = f"PEPCO_{sku_str}_CareLabel_{supplier_code}_00_{style_val}.csv"
+    else:
+        custom_filename = "PEPCO_export.csv"
+    
+    st.download_button(
+        "📥 Download CSV",
+        csv_buffer.getvalue().encode('utf-8-sig'),
+        file_name=custom_filename,
+        mime="text/csv"
+    )
+    
 # ================================================================
 # PEPCO SECTION (Uploader + Reset)
 # ================================================================
