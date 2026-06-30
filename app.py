@@ -1098,77 +1098,44 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     
     df['washing_code'] = WASHING_CODES[washing_code_key]
     
-   # ============================================================
-    # PRICE LADDER + CSV EXPORT
-    # ============================================================
-    if pln_price is not None:
-        currency_values = find_closest_price(pln_price)
-        if currency_values:
-            for cur in ['EUR', 'BGN', 'BAM', 'RON', 'CZK', 'UAH', 'MKD', 'RSD', 'HUF']:
-                df[cur] = currency_values.get(cur, "")
-            df['PLN'] = format_number(pln_price, 'PLN')
-            df["Item_name_English"] = df["Item_name_EN"].apply(clean_item_name_english)
-            
-            # Composition এবং Care Instructions একসাথে
-            combined_care = ""
-            if final_composition_text and care_inst_translated:
-                combined_care = f"{final_composition_text}\n\n{care_inst_translated}"
-            elif final_composition_text:
-                combined_care = final_composition_text
-            elif care_inst_translated:
-                combined_care = care_inst_translated
-            
-            df['Composition_Care'] = combined_care
-            
-            # SKU Name কলাম
-            df['SKU_Name'] = df['Colour_SKU'].apply(lambda x: re.sub(r".*SKU\s*", "", x))
-            # অথবা শুধু SKU নাম্বার চাইলে:
-            # df['SKU_Name'] = df['Colour_SKU'].apply(lambda x: re.sub(r".*SKU\s*", "", x))
+# ============================================================
+# COMPOSITION + CARE + CSV EXPORT
+# ============================================================
 
-            final_cols = [
-                "Order_ID", "Style", "Colour", "Supplier_product_code", "Item_classification",
-                "Supplier_name", "today_date", "Collection", "Colour_SKU", "Style_Merch_Season",
-                "Batch", "barcode", "washing_code", "EUR", "BGN", "BAM", "PLN", "RON", "CZK",
-                "UAH", "MKD", "RSD", "HUF", "product_name", "Dept", "Item_name_English", "Season",
-                "Composition_Care", "SKU_Name"  # নতুন কলাম
-            ]
-            
-            # Optionally include Cotton column
-            if 'Cotton' in df.columns and 'Cotton' not in final_cols:
-                final_cols.append("Cotton")
-            
-            for col in final_cols:
-                if col not in df.columns:
-                    df[col] = ""
-            
-            st.success("✅ Done! Product data processed successfully.")
-            st.subheader("✏️ Edit Before Download")
-            edited_df = st.data_editor(df[final_cols])
-            
-            # ... rest of the code (CSV export)
-            
-            csv_buffer = StringIO()
-            writer = pycsv.writer(csv_buffer, delimiter=';', quoting=pycsv.QUOTE_ALL)
-            writer.writerow(final_cols)
-            for row in edited_df.itertuples(index=False):
-                writer.writerow(row)
-            
-            first_row_df = df.iloc[0]
-            season_val = first_row_df.get("Season", "UNKNOWN").upper()
-            all_skus = df['Colour_SKU'].apply(lambda x: re.sub(r".*SKU\s*", "", x)).tolist()
-            sku_val = "_".join(all_skus) if all_skus else "UNKNOWN"
-            supplier_code = first_row_df.get("Supplier_product_code", "UNKNOWN")
-            style_val = first_row_df.get("Style", "UNKNOWN")
-            custom_filename = f"PEPCO_{season_val}_{sku_val}_Swingtag {supplier_code}_00_{style_val}.csv"
-            
-            st.download_button(
-                "📥 Download CSV",
-                csv_buffer.getvalue().encode('utf-8-sig'),
-                file_name=custom_filename,
-                mime="text/csv"
-            )
-        else:
-            st.warning("⚠️ Processing stopped - valid PLN price not found")
+# Composition এবং Care Instructions একসাথে
+combined_care = ""
+if final_composition_text and care_inst_translated:
+    combined_care = f"{final_composition_text}\n\n{care_inst_translated}"
+elif final_composition_text:
+    combined_care = final_composition_text
+elif care_inst_translated:
+    combined_care = care_inst_translated
+
+df['Composition_Care'] = combined_care
+
+# SKU Name কলাম
+df['SKU_Name'] = df['Colour_SKU'].apply(lambda x: re.sub(r".*SKU\s*", "", x))
+
+# Final Columns (Price columns ছাড়া)
+final_cols = [
+    "Order_ID", "Style", "Colour", "Supplier_product_code", "Item_classification",
+    "Supplier_name", "today_date", "Collection", "Colour_SKU", "Style_Merch_Season",
+    "Batch", "barcode", "washing_code", "product_name", "Dept", 
+    "Item_name_English", "Season", "Composition_Care", "SKU_Name"
+]
+
+# Optionally include Cotton column
+if 'Cotton' in df.columns and 'Cotton' not in final_cols:
+    final_cols.append("Cotton")
+
+# Ensure all columns exist
+for col in final_cols:
+    if col not in df.columns:
+        df[col] = ""
+
+st.success("✅ Done! Product data processed successfully.")
+st.subheader("✏️ Edit Before Download")
+edited_df = st.data_editor(df[final_cols])
 
 # CSV Export
 csv_buffer = StringIO()
@@ -1177,6 +1144,23 @@ writer.writerow(final_cols)
 
 for row in edited_df.itertuples(index=False):
     writer.writerow(row)
+
+# Generate custom filename
+first_row_df = df.iloc[0]
+season_val = first_row_df.get("Season", "UNKNOWN").upper()
+all_skus = df['Colour_SKU'].apply(lambda x: re.sub(r".*SKU\s*", "", x)).tolist()
+sku_val = "_".join(all_skus) if all_skus else "UNKNOWN"
+supplier_code = first_row_df.get("Supplier_product_code", "UNKNOWN")
+style_val = first_row_df.get("Style", "UNKNOWN")
+
+custom_filename = f"PEPCO_{season_val}_{sku_val}_Swingtag {supplier_code}_00_{style_val}.csv"
+
+st.download_button(
+    "📥 Download CSV",
+    csv_buffer.getvalue().encode('utf-8-sig'),
+    file_name=custom_filename,
+    mime="text/csv"
+)
 
 # Generate custom filename
 first_row_df = df.iloc[0]
