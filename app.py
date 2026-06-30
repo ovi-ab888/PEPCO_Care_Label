@@ -796,9 +796,6 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
             if comp_parts:
                 material_compositions[lang] = ", ".join(comp_parts)
     
-    if final_composition_text:
-        st.markdown("### 📋 Final Composition (All Languages)")
-        st.code(final_composition_text, language="text")
 
     # ============================================================
     # CARE INSTRUCTIONS
@@ -844,9 +841,6 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     
     care_inst_translated = "\n\n".join(all_care_inst_translated) if all_care_inst_translated else ""
     
-    if care_inst_translated:
-        with st.expander("📋 Preview Care Instructions (All Languages)"):
-            st.write(care_inst_translated)
 
     # ============================================================
     # CSV তৈরি
