@@ -347,13 +347,25 @@ def load_component_translations():
     care_data = load_care_composition_data()
     
     if not care_data["component_names"].empty:
-        return care_data["component_names"]
+        # Google Sheet থেকে আসা ডেটা
+        df = care_data["component_names"]
+        
+        # প্রয়োজনীয় সব ভাষার কলাম চেক করুন
+        required_cols = ['EN', 'AL', 'BG', 'BiH', 'CZ', 'DE', 'EE', 'ES', 'ES_CA', 'GR', 
+                        'HR', 'HU', 'IT', 'LT', 'LV', 'MK', 'PL', 'PT', 'RO', 'RS', 'SI', 'SK', 'UA']
+        
+        # কোন কলাম মিসিং আছে চেক করুন
+        missing_cols = [col for col in required_cols if col not in df.columns]
+        
+        if missing_cols:
+            # মিসিং কলামগুলো EN এর ডুপ্লিকেট দিয়ে পূর্ণ করুন
+            for col in missing_cols:
+                df[col] = df['EN'] if 'EN' in df.columns else df.iloc[:, 0]
+        
+        return df
     else:
-        return pd.DataFrame({
-            "EN": ["Main fabric", "Lining", "Pocket bag", "Trim", "Hood", "Collar", "Cuff"],
-            "AL": ["Pëlhurë kryesore", "Llastik", "Thes me xhepa", "Shkurtim", "Kapuç", "Jakë", "Manshetë"],
-            "BG": ["Основен плат", "Подплата", "Вътрешен джоб", "Подстригване", "Качулка", "Яка", "Маншет"]
-        })
+        # Google Sheet না পাওয়া গেলে খালি ডেটাফ্রেম রিটার্ন করুন
+        return pd.DataFrame()
 
 @st.cache_data(ttl=600)
 def load_material_translations():
