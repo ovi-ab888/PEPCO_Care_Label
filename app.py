@@ -1099,7 +1099,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     df['washing_code'] = WASHING_CODES[washing_code_key]
     
 # ============================================================
-# CSV EXPORT
+# COMPOSITION + CARE + CSV EXPORT
 # ============================================================
 
 # Composition এবং Care Instructions একসাথে
