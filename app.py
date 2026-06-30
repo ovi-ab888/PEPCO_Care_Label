@@ -418,9 +418,12 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     # ============================================================
     # UI - শুধু Washing Code
     # ============================================================
-    washing_options = list(WASHING_CODES.keys())
-    washing_code_key = st.selectbox("Select Washing Code", options=washing_options, key="ui_wash")
-
+    # ============================================================
+# UI - শুধু Washing Code (ডিফল্ট 9)
+# ============================================================
+washing_options = list(WASHING_CODES.keys())
+washing_default_index = washing_options.index('9') if '9' in washing_options else 0
+washing_code_key = st.selectbox("Select Washing Code", options=washing_options, index=washing_default_index, key="ui_wash")
     # ============================================================
     # Material Composition
     # ============================================================
