@@ -206,27 +206,6 @@ def load_component_translations():
         })
 
 
-# ================================================================
-#  PRICE DATA LOADER (Google Sheet)
-# ================================================================
-@st.cache_data(ttl=600)
-def load_price_data():
-    """Load currency price ladder from Google Sheet."""
-    try:
-        url = ("https://docs.google.com/spreadsheets/d/e/"
-               "2PACX-1vRdAQmBHwDEWCgmLdEdJc0HsFYpPSyERPHLwmr2tnTYU1BDWdBD6I0ZYfEDzataX0wTNhfLfnm-Te6w/"
-               "pub?gid=583402611&single=true&output=csv")
-        df = pd.read_csv(url)
-        if df.empty:
-            st.error("Price data sheet is empty")
-            return None
-        price_data = {}
-        for currency in df.columns:
-            price_data[currency] = df[currency].dropna().tolist()
-        return price_data
-    except Exception as e:
-        st.error(f"Failed to load price data: {str(e)}")
-        return None
 
 
 # ================================================================
@@ -296,41 +275,6 @@ def load_material_translations():
 #  HELPER FUNCTIONS
 # ================================================================
 
-def format_number(value, currency):
-    """Format numeric pricing based on currency."""
-    try:
-        if isinstance(value, str):
-            value = float(value.replace(',', '.'))
-        if currency in ['EUR', 'BGN', 'BAM', 'RON', 'PLN']:
-            formatted = f"{float(value):,.2f}".replace(".", ",")
-            if ',' in formatted:
-                parts = formatted.split(',')
-                parts[0] = parts[0].replace('.', '')
-                formatted = ','.join(parts)
-            return formatted
-        return str(int(float(value)))
-    except (ValueError, TypeError):
-        return str(value)
-
-
-def find_closest_price(pln_value):
-    """Returns matching row of other currencies for the PLN price."""
-    try:
-        price_data = load_price_data()
-        if not price_data or 'PLN' not in price_data:
-            st.error("Price data not available")
-            return None
-        pln_value = float(pln_value)
-        ladder = price_data['PLN']
-        if pln_value not in ladder:
-            st.error(f"PLN {pln_value} not found in price sheet.")
-            return None
-        idx = ladder.index(pln_value)
-        return {currency: format_number(values[idx], currency)
-                for currency, values in price_data.items() if currency != 'PLN'}
-    except Exception as e:
-        st.error(f"Invalid price value: {str(e)}")
-        return None
 
 
 def get_classification_type(item_class):
@@ -620,7 +564,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     # ============================================================
     # UI Controls (Department, Product, Washing, PLN)
     # ============================================================
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3 = st.columns(3)
 
     depts = translations_df['DEPARTMENT'].dropna().unique().tolist()
     default_dept_label = map_item_class_to_dept_label(pdf_item_class)
@@ -651,19 +595,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     with c3:
         washing_code_key = st.selectbox("Select Washing Code", options=washing_options, index=washing_default_index, key="ui_wash")
 
-    with c4:
-        pln_price_raw = st.text_input("Enter PLN Price", key="ui_pln_price")
 
-    pln_price = None
-    if pln_price_raw.strip():
-        try:
-            pln_price = float(pln_price_raw.replace(",", "."))
-            if pln_price < 0:
-                st.error("Price can't be negative.")
-                pln_price = None
-        except ValueError:
-            st.error("Please enter a valid number like 12.50 or 12,50")
-            pln_price = None
 
     # ============================================================
     # MATERIAL COMPOSITION UI (Clean Simple + Advanced Version)
@@ -1158,13 +1090,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     # ============================================================
     # PRICE LADDER + CSV EXPORT
     # ============================================================
-    if pln_price is not None:
-        currency_values = find_closest_price(pln_price)
-        if currency_values:
-            for cur in ['EUR', 'BGN', 'BAM', 'RON', 'CZK', 'UAH', 'MKD', 'RSD', 'HUF']:
-                df[cur] = currency_values.get(cur, "")
-            df['PLN'] = format_number(pln_price, 'PLN')
-            df["Item_name_English"] = df["Item_name_EN"].apply(clean_item_name_english)
+
             
             # Composition এবং Care Instructions একসাথে
             combined_care = ""
@@ -1185,8 +1111,8 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
             final_cols = [
                 "Order_ID", "Style", "Colour", "Supplier_product_code", "Item_classification",
                 "Supplier_name", "today_date", "Collection", "Colour_SKU", "Style_Merch_Season",
-                "Batch", "barcode", "washing_code", "EUR", "BGN", "BAM", "PLN", "RON", "CZK",
-                "UAH", "MKD", "RSD", "HUF", "product_name", "Dept", "Item_name_English", "Season",
+                "Batch", "barcode", "washing_code",
+                "product_name", "Dept", "Item_name_English", "Season",
                 "Composition_Care", "SKU_Name"  # নতুন কলাম
             ]
             
