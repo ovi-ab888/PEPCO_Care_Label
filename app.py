@@ -698,9 +698,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     
     care_inst_translated = "\n\n".join(all_care_inst_translated) if all_care_inst_translated else ""
     
-    if care_inst_translated:
-        with st.expander("📋 Preview Care Instructions (All Languages)"):
-            st.write(care_inst_translated)
+
     
     # ============================================================
     # Build Final DataFrame
@@ -734,9 +732,10 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         "Supplier_name",
         "today_date",
         "barcode",
+        "SKU_Name",
         "washing_code",
-        "Composition_Care",
-        "SKU_Name"
+        "Composition_Care"
+        
     ]
     
     # Ensure all columns exist
