@@ -747,13 +747,13 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
                 parts.append(mat_text)
         return "\n\n".join(parts)
     
-    # Output variables
+    # Initialize variables to avoid NameError
     final_composition_text = ""
-    selected_materials = []
-    cotton_value = ""
+    care_inst_translated = ""
+    combined_care = ""
     components_data = []
+    selected_materials = []
     material_compositions = {}
-    simple_comp_inst = ""
     
     # Render blocks
     for block_idx, block in enumerate(st.session_state.composition_blocks):
