@@ -197,24 +197,7 @@ def load_component_translations():
 
 
 
-# ================================================================
-#  PRODUCT TRANSLATION LOADER
-# ================================================================
-@st.cache_data(ttl=600)
-def load_product_translations():
-    """Load product name translations from Google Sheet."""
-    try:
-        sheet_id = "1ue68TSJQQedKa7sVBB4syOc0OXJNaLS7p9vSnV52mKA"
-        sheet_name = "SS26 Product_Name"
-        encoded = requests.utils.quote(sheet_name)
-        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={encoded}"
-        df = pd.read_csv(url)
-        if df.empty:
-            st.error("Loaded translations but sheet appears empty")
-        return df
-    except Exception as e:
-        st.error(f"Failed to load translations: {str(e)}")
-        return pd.DataFrame()
+
 
 
 # ================================================================
@@ -266,82 +249,17 @@ def load_material_translations():
 
 
 
-def get_classification_type(item_class):
-    if not item_class:
-        return None
-    ic = item_class.lower()
-    if 'younger girls outerwear' in ic:
-        return 'yg'
-    if 'older girls outerwear' in ic:
-        return 'og'
-    if 'younger boys outerwear' in ic:
-        return 'yb'
-    if 'older boys outerwear' in ic:
-        return 'ob'
-    if 'baby girls outerwear' in ic:
-        return 'a'
-    if 'baby boys outerwear' in ic:
-        return 'b'
-    if 'baby girls essentials' in ic:
-        return 'd_girls'
-    if 'baby boys essentials' in ic:
-        return 'd'
-    if 'ladies outerwear' in ic:
-        return 'l'
-    if 'mens outerwear' in ic:
-        return 'm'
-    return None
-
-
-def map_item_class_to_dept_label(item_class):
-    if not item_class:
-        return None
-    ic = item_class.lower()
-    if 'baby boys outerwear' in ic or 'baby boys essentials' in ic:
-        return "Baby Boy"
-    if 'baby girls outerwear' in ic or 'baby girls essentials' in ic:
-        return "Baby Girl"
-    if 'younger boys outerwear' in ic or 'older boys outerwear' in ic:
-        return "Boys"
-    if 'younger girls outerwear' in ic or 'older girls outerwear' in ic:
-        return "Girls"
-    if 'ladies outerwear' in ic:
-        return "Women"
-    if 'mens outerwear' in ic:
-        return "Mens"
-    return None
-
-
-def get_dept_value(item_class):
-    if not item_class:
-        return ""
-    ic = item_class.lower()
-    if any(x in ic for x in ['baby boys', 'baby girls']):
-        return "BABY"
-    if any(x in ic for x in ['younger boys', 'younger girls']):
-        return "KIDS"
-    if any(x in ic for x in ['older girls', 'older boys']):
-        return "TEENS"
-    if 'ladies outerwear' in ic:
-        return "WOMEN"
-    if 'mens outerwear' in ic:
-        return "MEN"
-    return ""
 
 
 
-def clean_item_name_english(name: str) -> str:
-    if not isinstance(name, str):
-        return ""
-    text = name.strip()
-    lower = text.lower()
-    prefixes = ["xxxxx", "xxxxx", "xxxxx", "xxxxx", "xxxxx", "xxxxx", "xxxxx", "xxxxx"]
-    for p in prefixes:
-        if lower.startswith(p):
-            cut_len = len(p)
-            text = text[cut_len:].strip(" -_,./").strip()
-            break
-    return text.upper()
+
+
+
+
+
+
+
+
 
 
 # ================================================================
@@ -410,6 +328,7 @@ def extract_data_from_pdf(file):
         full_text = "\n".join(pages_text)
         page1 = pages_text[0]
 
+        # Item_name_EN - রাখা হয়েছে (CSV তে না থাকলেও কাজে লাগতে পারে)
         m_item = re.search(r"Item\s*name\s*English\s*[:\.]{1,}\s*(.+)", full_text, re.IGNORECASE)
         if not m_item:
             m_item = re.search(r"Item\s*name\s*[:\.]{1,}\s*(.+?)\n", full_text, re.IGNORECASE)
@@ -425,7 +344,6 @@ def extract_data_from_pdf(file):
         elif merch_code:
             style_suffix = merch_code.group(1).strip()
 
-        
         date_match = re.search(r"Handover\s*date\s*\.{2,}\s*(\d{2}/\d{2}/\d{4})", page1)
 
         batch = "UNKNOWN"
@@ -442,9 +360,7 @@ def extract_data_from_pdf(file):
         supplier_name = re.search(r"Supplier name\s*\.{2,}\s*(.+)", page1)
 
         item_class_value = item_class.group(1).strip() if item_class else "UNKNOWN"
-        class_type = get_classification_type(item_class_value)
-
-
+        # ❌ get_classification_type() রিমুভ করা হয়েছে - দরকার নেই
 
         colour = extract_colour_from_pdf_pages(pages_text)
 
@@ -491,11 +407,7 @@ def extract_data_from_pdf(file):
                 "Item_classification": item_class_value,
                 "Supplier_name": supplier_name.group(1).strip() if supplier_name else "UNKNOWN",
                 "today_date": datetime.today().strftime('%d-%m-%Y'),
-                "Colour_SKU": f"{colour} • SKU {sku}",
-                "Style_Merch_Season": f"STYLE {style_code.group()} • {style_suffix} • Batch No./" if style_code else "STYLE UNKNOWN",
-                "Batch": f"виготовлення: {batch}",
                 "barcode": barcode,
-                "Item_name_EN": item_name_en or "",
                 "Season": season_value
             })
         return results
