@@ -644,19 +644,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     with c3:
         washing_code_key = st.selectbox("Select Washing Code", options=washing_options, index=washing_default_index, key="ui_wash")
 
-    with c4:
-        pln_price_raw = st.text_input("Enter PLN Price", key="ui_pln_price")
 
-    pln_price = None
-    if pln_price_raw.strip():
-        try:
-            pln_price = float(pln_price_raw.replace(",", "."))
-            if pln_price < 0:
-                st.error("Price can't be negative.")
-                pln_price = None
-        except ValueError:
-            st.error("Please enter a valid number like 12.50 or 12,50")
-            pln_price = None
 
     # ============================================================
     # MATERIAL COMPOSITION UI (Clean Simple + Advanced Version)
