@@ -92,26 +92,29 @@ div[data-testid="stNumberInput"] input{
 
 
 # ================================================================
-#  PASSWORD CHECK SYSTEM
+# PASSWORD CHECK SYSTEM (MULTIPLE PASSWORDS)
 # ================================================================
 def check_password():
-    """Simple password gate using secrets or environment."""
-    expected = None
+    """Password gate supporting multiple passwords from secrets."""
+    expected_passwords = None
 
     try:
-        expected = st.secrets.get("app_password", None)
+        expected_passwords = st.secrets.get("app_passwords", None)
     except Exception:
-        expected = None
+        expected_passwords = None
 
-    if expected is None:
-        expected = os.environ.get("PEPCO_APP_PASSWORD")
+    if expected_passwords is None:
+        env_pass = os.environ.get("PEPCO_APP_PASSWORD")
+        if env_pass:
+            expected_passwords = [env_pass]
 
-    if expected is None:
-        st.error("App password not configured. Please set 'app_password' in secrets or PEPCO_APP_PASSWORD env var.")
+    if expected_passwords is None:
+        st.error("App passwords not configured. Please set 'app_passwords' in secrets or PEPCO_APP_PASSWORD env var.")
         return False
 
     def _password_entered():
-        if st.session_state.get("password") == expected:
+        entered = st.session_state.get("password", "")
+        if entered in expected_passwords:
             st.session_state["password_correct"] = True
             try:
                 del st.session_state["password"]
@@ -126,7 +129,7 @@ def check_password():
     st.text_input("Enter Your Access Code", type="password", key="password", on_change=_password_entered)
 
     if st.session_state.get("password_correct") is False:
-        st.error("Your password Incorrect, Please contact Mr. Ovi")
+        st.error("❌ Your password is incorrect. Please contact Mr. Ovi")
 
     return False
 
