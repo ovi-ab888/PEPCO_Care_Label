@@ -473,8 +473,12 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         for col in materials_df.columns:
             val = row.iloc[0].get(col, "")
             if pd.notna(val) and str(val).strip() and val != mat_name:
-                translations.append(str(val).strip())
-        return f"{pct}% {'/ '.join(translations)}"
+                text = str(val).strip()
+            # প্রথম লেটার ক্যাপিটাল করুন
+                if text:
+                    text = text[0].upper() + text[1:] if len(text) > 1 else text.upper()
+                translations.append(text)
+        return f"{pct}% {' / '.join(translations)}"
     
     def get_component_name_translations(comp_name):
         if comp_translations_df.empty:
@@ -501,8 +505,12 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         for col in care_instructions_df.columns:
             val = row.iloc[0].get(col, "")
             if pd.notna(val) and str(val).strip():
-                translations.append(str(val).strip())
-        return " / ".join(translations)
+                text = str(val).strip()
+           
+                if text:
+                    text = text[0].upper() + text[1:] if len(text) > 1 else text.upper()
+                translations.append(text)
+        return "/ ".join(translations)
     
     def build_material_line(materials, use_translation=True):
         parts = []
