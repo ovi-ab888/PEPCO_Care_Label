@@ -1102,7 +1102,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     # PRICE LADDER + CSV EXPORT
     # ============================================================
 
-        df["Item_name_English"] = df["Item_name_EN"].apply(clean_item_name_english)
+
             
             # Composition এবং Care Instructions একসাথে
             combined_care = ""
