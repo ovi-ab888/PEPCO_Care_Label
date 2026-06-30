@@ -92,7 +92,7 @@ div[data-testid="stNumberInput"] input{
 
 
 # ================================================================
-# PASSWORD CHECK SYSTEM (MULTIPLE PASSWORDS)
+# PASSWORD CHECK SYSTEM (MULTIPLE PASSWORDS SUPPORT)
 # ================================================================
 def check_password():
     """Password gate supporting multiple passwords from secrets."""
