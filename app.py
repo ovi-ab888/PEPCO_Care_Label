@@ -504,16 +504,19 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
                 translations.append(str(val).strip())
         return " / ".join(translations)
     
-    def build_material_line(materials, use_translation=True):
-        parts = []
-        for m in materials:
-            if m["mat"] and m["pct"] > 0:
-                if use_translation:
-                    mat_text = get_material_all_languages(m["mat"], m["pct"])
-                else:
-                    mat_text = f"{m['pct']}% {m['mat']}"
-                parts.append(mat_text)
-        return "\n\n".join(parts)
+def build_material_line(materials, use_translation=True):
+    parts = []
+    for m in materials:
+        if m["mat"] and m["pct"] > 0:
+            if use_translation:
+                mat_text = get_material_all_languages(m["mat"], m["pct"])
+                # প্রথম লেটার ক্যাপিটাল করুন
+                if mat_text:
+                    mat_text = mat_text[0].upper() + mat_text[1:] if len(mat_text) > 1 else mat_text.upper()
+            else:
+                mat_text = f"{m['pct']}% {m['mat']}"
+            parts.append(mat_text)
+    return "\n\n".join(parts)
     
     # Render blocks
     components_data = []
