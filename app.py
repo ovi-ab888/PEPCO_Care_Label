@@ -2066,12 +2066,15 @@ def pepco_section():
                     st.session_state.pop(k, None)
             st.session_state.uploader_key += 1
         
-        st.button("🆕 Upload New File", on_click=_reset_all, key="reset_button")
+        # unique key ব্যবহার করুন
+        st.button("🆕 Upload New File", on_click=_reset_all, key=f"reset_button_{st.session_state.uploader_key}")
+    
+    uploader_key = f"pepco_uploader_{st.session_state.uploader_key}"
     
     uploaded_pdfs = st.file_uploader(
         "Upload PEPCO Data file (PDF)",
         type=["pdf"],
-        key=f"pepco_uploader_{st.session_state.uploader_key}",
+        key=uploader_key,
         accept_multiple_files=True
     )
     
