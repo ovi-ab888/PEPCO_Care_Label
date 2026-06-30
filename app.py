@@ -653,9 +653,6 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
             if comp_parts:
                 material_compositions[lang] = ", ".join(comp_parts)
     
-    if final_composition_text:
-        st.markdown("### 📋 Final Composition (All Languages)")
-        st.code(final_composition_text, language="text")
     
     # ============================================================
     # CARE INSTRUCTIONS UI
