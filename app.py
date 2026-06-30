@@ -985,23 +985,30 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
 def pepco_section():
     st.subheader("📄 PEPCO Data Processing")
     
+    # uploader_key session state এ রাখুন
     if "uploader_key" not in st.session_state:
         st.session_state.uploader_key = 0
     
     cols = st.columns([1, 6])
     with cols[0]:
         def _reset_all():
+            # সব সেশন স্টেট ক্লিয়ার করুন
             for k in list(st.session_state.keys()):
                 if k.startswith(("mat_", "pepco_", "comp_", "care_", "simple_", "composition_", "manual_colour_", "new_care_inst_select")):
                     st.session_state.pop(k, None)
+            # uploader_key increment করুন
             st.session_state.uploader_key += 1
         
-        st.button("🆕 Upload New File", on_click=_reset_all)
+        # reset_button এ key দিন
+        st.button("🆕 Upload New File", on_click=_reset_all, key="reset_button")
+    
+    # 🔧 FIX: unique key তৈরি করুন
+    uploader_key = f"pepco_uploader_{st.session_state.uploader_key}"
     
     uploaded_pdfs = st.file_uploader(
         "Upload PEPCO Data file (PDF)",
         type=["pdf"],
-        key=f"pepco_uploader_{st.session_state.uploader_key}",
+        key=uploader_key,
         accept_multiple_files=True
     )
     
@@ -1030,7 +1037,7 @@ def pepco_section():
         
         concatenated_ids = "+".join(other_ids) if other_ids else ""
         process_pepco_pdf(primary_pdf, extra_order_ids=concatenated_ids)
-
+        
 # ================================================================
 # HEADER RENDER
 # ================================================================
