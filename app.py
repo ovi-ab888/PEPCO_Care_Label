@@ -866,7 +866,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     final_cols = [
         "Order_ID", "Style", "Colour", "Supplier_product_code", "Item_classification",
         "Supplier_name", "today_date",
-        "barcode",  "SKU_Name", "washing_code", "product_name", 
+        "barcode",  "SKU_Name", "washing_code",
         "Season", "Composition_Care"
     ]
     
