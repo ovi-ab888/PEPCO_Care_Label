@@ -619,7 +619,53 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         except Exception:
             pass
 
+    # ============================================================
+    # UI Controls (Department, Product, Washing, PLN)
+    # ============================================================
+    c1, c2, c3, c4 = st.columns(4)
 
+    depts = translations_df['DEPARTMENT'].dropna().unique().tolist()
+    default_dept_label = map_item_class_to_dept_label(pdf_item_class)
+    default_dept_index = 0
+    if default_dept_label:
+        for i, d in enumerate(depts):
+            if str(d).strip().lower() == str(default_dept_label).strip().lower():
+                default_dept_index = i
+                break
+
+    with c1:
+        selected_dept = st.selectbox("Select Department", options=depts, index=default_dept_index, key="ui_dept")
+
+    filtered = translations_df[translations_df['DEPARTMENT'] == selected_dept]
+    products = filtered['PRODUCT_NAME'].dropna().unique().tolist()
+    default_product_index = 0
+    if pdf_item_name_en:
+        for i, p in enumerate(products):
+            if str(p).strip().lower() == pdf_item_name_en.strip().lower():
+                default_product_index = i
+                break
+
+    with c2:
+        product_type = st.selectbox("Select Product Type", options=products, index=default_product_index, key="ui_product")
+
+    washing_options = list(WASHING_CODES.keys())
+    washing_default_index = washing_options.index('9') if '9' in washing_options else 0
+    with c3:
+        washing_code_key = st.selectbox("Select Washing Code", options=washing_options, index=washing_default_index, key="ui_wash")
+
+    with c4:
+        pln_price_raw = st.text_input("Enter PLN Price", key="ui_pln_price")
+
+    pln_price = None
+    if pln_price_raw.strip():
+        try:
+            pln_price = float(pln_price_raw.replace(",", "."))
+            if pln_price < 0:
+                st.error("Price can't be negative.")
+                pln_price = None
+        except ValueError:
+            st.error("Please enter a valid number like 12.50 or 12,50")
+            pln_price = None
 
     # ============================================================
     # MATERIAL COMPOSITION UI (Clean Simple + Advanced Version)
