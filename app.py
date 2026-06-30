@@ -127,7 +127,7 @@ def check_password():
     return False
 
 # ================================================================
-# CONSTANTS & MAPPINGS
+# CONSTANTS
 # ================================================================
 WASHING_CODES = {
     '1': '১২৩৪৫', '2': '১৪৭৮৫', '3': 'djnst', '4': 'djnpt', '5': 'djnqt',
@@ -135,21 +135,8 @@ WASHING_CODES = {
     '11': 'ijnst', '12': 'ijnsu', '13': 'ijnpu', '14': 'ijnsv', '15': 'djnsw'
 }
 
-COLLECTION_MAPPING = {
-    "a": {"CUTE BEAR": "MODERN 1", "SUMMER CHERRY": "ROMANTIC 1", "AUTUMN": "ROMANTIC 2"},
-    "d_girls": {"FLOWER MOUSE": "MODERN 1", "LITTEL FOREST": "ROMANTIC 1"},
-    "b": {"DOGS&FRIENDS": "MODERN 1", "EXPOLORE THE MOUNTINE": "MODERN 2", "SUMMER FUN": "MODERN 4", "COOL TRIP": "CLASSIC 1", "COLLEGE BEARS": "CLASSIC 1"},
-    "d": {"DOGS FRIENDS": "CLASSIC 1", "FOREST STORY": "MODERN 1", "LITTLE DREAMER": "MODERN 1", "X-MAS": "CLASSIC 2"},
-    "yg": {"PONNY_RAINBOW": "COLLECTION 1", "MEOW_STORY": "COLLECTION 2", "BTS": "COLLECTION 3", "COZY AUTUMN": "COLLECTION 4", "WINTER BALLET": "COLLECTION 5", "XMAS": "COLLECTION 6", "PARTY": "COLLECTION 7"},
-    "og": {"TRANSITIONAL_GRAFFITI VIBES": "COLLECTION_0", "COOL STYLE": "COLLECTION_1", "COOL COLLEGE LEAGUE": "COLLECTION_2", "GLAMROCK GIRL": "COLLECTION_3", "COZYTIME": "COLLECTION_4", "XMAS & PARTY": "COLLECTION_5"},
-    "yb": {"XXXXX_1": "COLLECTION_1", "XXXXX_2": "COLLECTION_2", "XXXXX_3": "COLLECTION_3", "XXXXX_4": "COLLECTION_4", "XXXXX_5": "COLLECTION_5"},
-    "ob": {"STREET RACING": "COLLECTION_1", "CAMPUS LIFE": "COLLECTION_2", "DIGITAL RIDE": "COLLECTION_3", "XMAS": "COLLECTION_4"},
-    "l": {"XXXXX_1": "COLLECTION_1", "XXXXX_2": "COLLECTION_2", "XXXXX_3": "COLLECTION_3", "XXXXX_4": "COLLECTION_4", "XXXXX_5": "COLLECTION_5"},
-    "m": {"XXXXX_1": "COLLECTION_1", "XXXXX_2": "COLLECTION_2", "XXXXX_3": "COLLECTION_3", "XXXXX_4": "COLLECTION_4", "XXXXX_5": "COLLECTION_5"},
-}
-
 # ================================================================
-# DATA LOADERS
+# DATA LOADERS (শুধু প্রয়োজনীয়)
 # ================================================================
 @st.cache_data(ttl=600)
 def load_care_composition_data():
@@ -192,22 +179,6 @@ def load_component_translations():
         })
 
 @st.cache_data(ttl=600)
-def load_product_translations():
-    """Load product name translations from Google Sheet."""
-    try:
-        sheet_id = "1ue68TSJQQedKa7sVBB4syOc0OXJNaLS7p9vSnV52mKA"
-        sheet_name = "SS26 Product_Name"
-        encoded = requests.utils.quote(sheet_name)
-        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={encoded}"
-        df = pd.read_csv(url)
-        if df.empty:
-            st.error("Loaded translations but sheet appears empty")
-        return df
-    except Exception as e:
-        st.error(f"Failed to load translations: {str(e)}")
-        return pd.DataFrame()
-
-@st.cache_data(ttl=600)
 def load_material_translations():
     """Load material translations (AL, MK) with fallback."""
     try:
@@ -247,91 +218,7 @@ def load_material_translations():
         return pd.DataFrame(fallback)
 
 # ================================================================
-# HELPER FUNCTIONS
-# ================================================================
-def get_classification_type(item_class):
-    if not item_class:
-        return None
-    ic = item_class.lower()
-    if 'younger girls outerwear' in ic:
-        return 'yg'
-    if 'older girls outerwear' in ic:
-        return 'og'
-    if 'younger boys outerwear' in ic:
-        return 'yb'
-    if 'older boys outerwear' in ic:
-        return 'ob'
-    if 'baby girls outerwear' in ic:
-        return 'a'
-    if 'baby boys outerwear' in ic:
-        return 'b'
-    if 'baby girls essentials' in ic:
-        return 'd_girls'
-    if 'baby boys essentials' in ic:
-        return 'd'
-    if 'ladies outerwear' in ic:
-        return 'l'
-    if 'mens outerwear' in ic:
-        return 'm'
-    return None
-
-def map_item_class_to_dept_label(item_class):
-    if not item_class:
-        return None
-    ic = item_class.lower()
-    if 'baby boys outerwear' in ic or 'baby boys essentials' in ic:
-        return "Baby Boy"
-    if 'baby girls outerwear' in ic or 'baby girls essentials' in ic:
-        return "Baby Girl"
-    if 'younger boys outerwear' in ic or 'older boys outerwear' in ic:
-        return "Boys"
-    if 'younger girls outerwear' in ic or 'older girls outerwear' in ic:
-        return "Girls"
-    if 'ladies outerwear' in ic:
-        return "Women"
-    if 'mens outerwear' in ic:
-        return "Mens"
-    return None
-
-def get_dept_value(item_class):
-    if not item_class:
-        return ""
-    ic = item_class.lower()
-    if any(x in ic for x in ['baby boys', 'baby girls']):
-        return "BABY"
-    if any(x in ic for x in ['younger boys', 'younger girls']):
-        return "KIDS"
-    if any(x in ic for x in ['older girls', 'older boys']):
-        return "TEENS"
-    if 'ladies outerwear' in ic:
-        return "WOMEN"
-    if 'mens outerwear' in ic:
-        return "MEN"
-    return ""
-
-def modify_collection(collection, item_class):
-    if not item_class:
-        return collection
-    ic = item_class.lower()
-    if any(x in ic for x in ['younger boys', 'older boys']):
-        return f"{collection} B"
-    if any(x in ic for x in ['younger girls', 'older girls']):
-        return f"{collection} G"
-    return collection
-
-def clean_item_name_english(name: str) -> str:
-    if not isinstance(name, str):
-        return ""
-    text = name.strip()
-    prefixes_to_remove = ["KIDS", "BABY", "WOMEN", "MEN", "TEENS"]
-    for p in prefixes_to_remove:
-        if text.upper().startswith(p):
-            text = text[len(p):].strip(" -_.,/").strip()
-            break
-    return text.upper()
-
-# ================================================================
-# PDF EXTRACTION
+# PDF EXTRACTION (শুধু প্রয়োজনীয়)
 # ================================================================
 def extract_colour_from_pdf_pages(pages_text):
     for txt in pages_text:
@@ -391,31 +278,13 @@ def extract_data_from_pdf(file):
         full_text = "\n".join(pages_text)
         page1 = pages_text[0]
 
+        # Item name EN (শুধু SKU_Name এর জন্য প্রয়োজন)
         m_item = re.search(r"Item\s*name\s*English\s*[:\.]{1,}\s*(.+)", full_text, re.IGNORECASE)
         if not m_item:
             m_item = re.search(r"Item\s*name\s*[:\.]{1,}\s*(.+?)\n", full_text, re.IGNORECASE)
         item_name_en = m_item.group(1).strip() if m_item else None
 
-        merch_code = re.search(r"Merch\s*code\s*\.{2,}\s*([\w/]+)", page1)
-        season = re.search(r"Season\s*\.{2,}\s*(\w+)?\s*(\d{2})", page1)
         style_code = re.search(r"\b\d{6}\b", page1)
-
-        style_suffix = ""
-        if merch_code and season:
-            style_suffix = f"{merch_code.group(1).strip()}{season.group(2)}"
-        elif merch_code:
-            style_suffix = merch_code.group(1).strip()
-
-        collection = re.search(r"Collection\s*\.{2,}\s*(.+)", page1)
-        date_match = re.search(r"Handover\s*date\s*\.{2,}\s*(\d{2}/\d{2}/\d{4})", page1)
-
-        batch = "UNKNOWN"
-        if date_match:
-            try:
-                batch_date = datetime.strptime(date_match.group(1), "%d/%m/%Y")
-                batch = (batch_date - timedelta(days=20)).strftime("%m%Y")
-            except Exception:
-                pass
 
         order_id = re.search(r"Order\s*-\s*ID\s*\.{2,}\s*(.+)", page1)
         item_class = re.search(r"Item classification\s*\.{2,}\s*(.+)", page1)
@@ -423,15 +292,6 @@ def extract_data_from_pdf(file):
         supplier_name = re.search(r"Supplier name\s*\.{2,}\s*(.+)", page1)
 
         item_class_value = item_class.group(1).strip() if item_class else "UNKNOWN"
-        class_type = get_classification_type(item_class_value)
-
-        collection_value = collection.group(1).split("-")[0].strip() if collection else "UNKNOWN"
-        if class_type and class_type in COLLECTION_MAPPING:
-            for orig, new in COLLECTION_MAPPING[class_type].items():
-                if orig.upper() in collection_value.upper():
-                    collection_value = new
-                    break
-
         colour = extract_colour_from_pdf_pages(pages_text)
 
         skus = []
@@ -465,8 +325,6 @@ def extract_data_from_pdf(file):
             skus = skus[:min_len]
             valid_barcodes = valid_barcodes[:min_len]
 
-        season_value = f"{season.group(1)}{season.group(2)}" if season else "UNKNOWN"
-
         results = []
         for sku, barcode in zip(skus, valid_barcodes):
             results.append({
@@ -477,13 +335,9 @@ def extract_data_from_pdf(file):
                 "Item_classification": item_class_value,
                 "Supplier_name": supplier_name.group(1).strip() if supplier_name else "UNKNOWN",
                 "today_date": datetime.today().strftime('%d-%m-%Y'),
-                "Collection": collection_value,
                 "Colour_SKU": f"{colour} • SKU {sku}",
-                "Style_Merch_Season": f"STYLE {style_code.group()} • {style_suffix} • Batch No./" if style_code else "STYLE UNKNOWN",
-                "Batch": f"виготовлення: {batch}",
                 "barcode": barcode,
-                "Item_name_EN": item_name_en or "",
-                "Season": season_value
+                "Item_name_EN": item_name_en or ""  # SKU_Name এর জন্য রাখা
             })
         return results
     except Exception as e:
@@ -491,12 +345,11 @@ def extract_data_from_pdf(file):
         return None
 
 # ================================================================
-# MAIN PROCESSOR (SIMPLIFIED)
+# MAIN PROCESSOR (সরলীকৃত)
 # ================================================================
 def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     """Main pipeline: parse PDF, build DF, export CSV."""
     
-    translations_df = load_product_translations()
     material_translations_df = load_material_translations()
     care_data = load_care_composition_data()
     comp_translations_df = load_component_translations()
@@ -518,7 +371,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
             pass
 
     # ============================================================
-    # MATERIAL COMPOSITION UI (Simplified)
+    # MATERIAL COMPOSITION UI
     # ============================================================
     st.markdown("### 🧵 Material Composition (%)")
     
@@ -855,51 +708,8 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     # ============================================================
     # Build Final DataFrame
     # ============================================================
-    # Use default washing code
     washing_code_key = '9'
-    
-    # Get product info from PDF
-    first_row = df.iloc[0] if not df.empty else {}
-    pdf_item_class = first_row.get("Item_classification", "")
-    pdf_item_name_en = first_row.get("Item_name_EN", "")
-    
-    # Map department
-    selected_dept = map_item_class_to_dept_label(pdf_item_class) or "UNKNOWN"
-    
-    # Get product translations
-    product_type = pdf_item_name_en if pdf_item_name_en else "UNKNOWN"
-    
-    df['Dept'] = df['Item_classification'].apply(get_dept_value)
-    
-    if 'Cotton' in df.columns:
-        df = df.drop(columns=['Cotton'])
-    
-    df['Collection'] = df.apply(lambda r: modify_collection(r['Collection'], r['Item_classification']), axis=1)
-    
-    # Simple product name formatting
-    def format_product_name_simple(product_name, translation_row):
-        language_order = ['EN', 'AL', 'BG', 'BiH', 'CZ', 'DE', 'EE', 'ES', 'GR', 'HR', 'HU', 
-                         'IT', 'LT', 'LV', 'MK', 'PL', 'PT', 'RO', 'RS', 'SI', 'SK', 'UA']
-        
-        result = []
-        for lang in language_order:
-            text = translation_row.get(lang, product_name)
-            result.append(f"|{lang}| {text}")
-        
-        return " ".join(result)
-    
-    # Try to get translations
-    product_name_final = product_type
-    if not translations_df.empty:
-        # Try to find matching department and product
-        dept_filtered = translations_df[translations_df['DEPARTMENT'] == selected_dept]
-        if not dept_filtered.empty:
-            product_row = dept_filtered[dept_filtered['PRODUCT_NAME'] == product_type]
-            if not product_row.empty:
-                product_name_final = format_product_name_simple(product_type, product_row.iloc[0])
-    
     df['washing_code'] = WASHING_CODES[washing_code_key]
-    df["Item_name_English"] = df["Item_name_EN"].apply(clean_item_name_english)
     
     # Composition + Care combined
     combined_care = ""
@@ -912,11 +722,11 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     
     df['Composition_Care'] = combined_care
     
-    # SKU Name
+    # SKU Name from Colour_SKU
     df['SKU_Name'] = df['Colour_SKU'].apply(lambda x: re.sub(r".*SKU\s*", "", x))
     
     # ============================================================
-    # FINAL COLUMNS (Only these 11 columns)
+    # FINAL COLUMNS (Only 11 columns)
     # ============================================================
     final_cols = [
         "Order_ID",
