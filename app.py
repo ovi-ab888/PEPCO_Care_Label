@@ -734,8 +734,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         "barcode",
         "SKU_Name",
         "washing_code",
-        "Composition_Care"
-        
+        "Composition_Care" 
     ]
     
     # Ensure all columns exist
