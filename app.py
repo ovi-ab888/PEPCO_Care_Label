@@ -393,7 +393,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
             if pd.notna(val) and str(val).strip() and val != mat_name:
                 translations.append(str(val).strip())
         
-        return f"{pct}% {' / '.join(translations)}"
+        return f"{pct}% {'/ '.join(translations)}"
     
     def get_component_name_translations(comp_name):
         if comp_translations_df.empty:
@@ -771,7 +771,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         sku_val = first_row_df.get("SKU_Name", "UNKNOWN")
         supplier_code = first_row_df.get("Supplier_product_code", "UNKNOWN")
         style_val = first_row_df.get("Style", "UNKNOWN")
-        custom_filename = f"PEPCO_{sku_val}_Swingtag_{supplier_code}_00_{style_val}.csv"
+        custom_filename = f"PEPCO_{sku_val}_CareLabel_{supplier_code}_00_{style_val}.csv"
     else:
         custom_filename = "PEPCO_export.csv"
     
