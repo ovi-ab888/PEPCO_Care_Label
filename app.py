@@ -723,20 +723,19 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     # ============================================================
     # FINAL COLUMNS (Only 11 columns)
     # ============================================================
-    final_cols = [
-        "Order_ID",
-        "Style",
-        "Colour",
-        "Supplier_product_code",
-        "Item_classification",
-        "Supplier_name",
-        "today_date",
-        "barcode",
-        "SKU_Name",
-        "washing_code",
-        "Composition_Care" 
-    ]
-    
+final_cols = [
+    "Order_ID",
+    "Style",
+    "Colour",
+    "Supplier_product_code",
+    "Item_classification",
+    "Supplier_name",
+    "today_date",
+    "barcode",
+    "washing_code",
+    "Composition_Care",
+    "SKU_Name"
+]
     # Ensure all columns exist
     for col in final_cols:
         if col not in df.columns:
