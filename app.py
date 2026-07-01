@@ -739,45 +739,44 @@ df['Composition_Care'] = combined_care
 
 # SKU_Name তৈরি - barcode থেকে
 df['SKU_Name'] = df['barcode'].astype(str)
-    
-    # CSV এর কলাম
-    final_cols = [
-        "Order_ID", "Style", "Colour", "Supplier_product_code", "Item_classification",
-        "Supplier_name", "today_date",
-        "barcode", "SKU_Name", "washing_code",
-        "Season", "Composition_Care"
-    ]
-    
-    for col in final_cols:
-        if col not in df.columns:
-            df[col] = ""
-    
-    st.success("✅ Done! Product data processed successfully.")
-    st.subheader("✏️ Edit Before Download")
-    edited_df = st.data_editor(df[final_cols])
-    
-    # CSV Download
-    csv_buffer = StringIO()
-    writer = pycsv.writer(csv_buffer, delimiter=';', quoting=pycsv.QUOTE_ALL)
-    writer.writerow(final_cols)
-    for row in edited_df.itertuples(index=False):
-        writer.writerow(row)
-    
-    first_row_df = df.iloc[0]
-    season_val = first_row_df.get("Season", "UNKNOWN").upper()
-    all_skus = df['SKU_Name'].tolist()
-    sku_val = "_".join(all_skus) if all_skus else "UNKNOWN"
-    supplier_code = first_row_df.get("Supplier_product_code", "UNKNOWN")
-    style_val = first_row_df.get("Style", "UNKNOWN")
-    custom_filename = f"PEPCO_{season_val}_{sku_val}_Swingtag {supplier_code}_00_{style_val}.csv"
-    
-    st.download_button(
-        "📥 Download CSV",
-        csv_buffer.getvalue().encode('utf-8-sig'),
-        file_name=custom_filename,
-        mime="text/csv"
-    )
 
+# CSV এর কলাম
+final_cols = [
+    "Order_ID", "Style", "Colour", "Supplier_product_code", "Item_classification",
+    "Supplier_name", "today_date",
+    "barcode", "SKU_Name", "washing_code",
+    "Season", "Composition_Care"
+]
+
+for col in final_cols:
+    if col not in df.columns:
+        df[col] = ""
+
+st.success("✅ Done! Product data processed successfully.")
+st.subheader("✏️ Edit Before Download")
+edited_df = st.data_editor(df[final_cols])
+
+# CSV Download
+csv_buffer = StringIO()
+writer = pycsv.writer(csv_buffer, delimiter=';', quoting=pycsv.QUOTE_ALL)
+writer.writerow(final_cols)
+for row in edited_df.itertuples(index=False):
+    writer.writerow(row)
+
+first_row_df = df.iloc[0]
+season_val = first_row_df.get("Season", "UNKNOWN").upper()
+all_skus = df['SKU_Name'].tolist()
+sku_val = "_".join(all_skus) if all_skus else "UNKNOWN"
+supplier_code = first_row_df.get("Supplier_product_code", "UNKNOWN")
+style_val = first_row_df.get("Style", "UNKNOWN")
+custom_filename = f"PEPCO_{season_val}_{sku_val}_Swingtag {supplier_code}_00_{style_val}.csv"
+
+st.download_button(
+    "📥 Download CSV",
+    csv_buffer.getvalue().encode('utf-8-sig'),
+    file_name=custom_filename,
+    mime="text/csv"
+)
 
 # ================================================================
 #  PEPCO SECTION (Uploader + Reset)
