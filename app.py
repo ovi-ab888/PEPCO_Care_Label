@@ -699,23 +699,46 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     
     care_inst_translated = "\n\n".join(all_care_inst_translated) if all_care_inst_translated else ""
 
-    # ============================================================
-    # CSV তৈরি
-    # ============================================================
-    df['washing_code'] = WASHING_CODES[washing_code_key]
+# ============================================================
+# CSV তৈরি
+# ============================================================
+df['washing_code'] = WASHING_CODES[washing_code_key]
     
-    combined_care = ""
-    if final_composition_text and care_inst_translated:
-        combined_care = f"{final_composition_text}\n\n{care_inst_translated}"
-    elif final_composition_text:
-        combined_care = final_composition_text
-    elif care_inst_translated:
-        combined_care = care_inst_translated
-    
-    df['Composition_Care'] = combined_care
-    
-    # SKU_Name তৈরি - barcode থেকে
-    df['SKU_Name'] = df['barcode'].astype(str)
+# 1. কম্পোজিশন + কেয়ার ইন্সট্রাকশন
+combined_care = ""
+if final_composition_text and care_inst_translated:
+    combined_care = f"{final_composition_text}\n\n{care_inst_translated}"
+elif final_composition_text:
+    combined_care = final_composition_text
+elif care_inst_translated:
+    combined_care = care_inst_translated
+
+# 2. Skupljanje লাইন যোগ করুন
+shrinkage_line = "Skupljanje:  po dužini: 4%, po širini 4%"
+
+# 3. Bangladesh/Produced by লাইন যোগ করুন
+bangladesh_line = """Bangladesh/ Произведено в Бангладеш/ Fabricado en Bangladesh/ Κατασκευάζεται στην Μπαγκλαντές/ Pagaminta Bangladeše/ Ražots Bangladešā/ Произведено во Бангладеш/ Proizvedeno u Bangladešu/ Zemlja izvoza: EU/ Виготовлено в Бангладеш.
+
+Produced by/ Prodhuesi/ Производител/ Výrobce/ Hersteller/ Tootja/ Fabricante/
+Fabricant/ Κατασκευαστής/ Proizvođač/ Gyártó/ Produttore/ Gamintojas/ Ražotājs/ Producent/ Producător/ Izdelovalec/ Výrobca/ Виробник:
+
+Pepco Poland Sp. z o.o., ul. Strzeszyńska 73A, 60-479 Poznań Poland, klient@pepco.eu,
+NIP (NIF) 782-21-31-157.
+Пепко Полска Сп. з o.o., ул. Стрзесзинска 73А, 60-479 Познан. Пепко Польска Сп. з.о.о., вул Стшешинська 73A, 60-479 Познань. Na tržište RH stavlja: Pepco Croatia d.o.o., D. T. Gavrana 11, 10020 Zagreb.
+Uvoznik za Srbiju: Pepco d.o.o., Pariske komune 22, 11070 Beograd-Novi Beograd. klijent.rs@pepco.eu
+Διανομέας: Pepco Greece Μονοπρόσωπη Ι.Κ.Ε., Πέτρου Ράλλη 97, 182 33, Αγ. Ιωάννης Ρέντης. Uvoznik za BiH: Pepco B-H d.o.o., ulica Skenderpašina br. 1, Opština Centar Sarajevo, 71 000 Sarajevo. klijent.ba@pepco.eu
+Увозник/ Importuesi: ПЕПЦО ДООЕЛ Скопје, Ул. НАУМ НАУМОВСКИ - БОРЧЕ Бр.40/5-8 СКОПЈЕ - ЦЕНТАР ЦЕНТАР/ PEPCO DOOEL Shkup, Rruga Naum Naumovski-Borche Nr. 40/5-8, Shkup – Qendër, Maqedonia e Veriut."""
+
+# সবকিছু একসাথে যোগ করুন
+if combined_care:
+    combined_care = f"{combined_care}\n\n{shrinkage_line}\n\n{bangladesh_line}"
+else:
+    combined_care = f"{shrinkage_line}\n\n{bangladesh_line}"
+
+df['Composition_Care'] = combined_care
+
+# SKU_Name তৈরি - barcode থেকে
+df['SKU_Name'] = df['barcode'].astype(str)
     
     # CSV এর কলাম
     final_cols = [
