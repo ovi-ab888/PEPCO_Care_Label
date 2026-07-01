@@ -92,32 +92,26 @@ div[data-testid="stNumberInput"] input{
 
 
 # ================================================================
-# PASSWORD CHECK SYSTEM (MULTIPLE PASSWORDS)
+#  PASSWORD CHECK SYSTEM
 # ================================================================
 def check_password():
-    """Password gate supporting multiple passwords from secrets."""
-    expected_passwords = None
+    """Simple password gate using secrets or environment."""
+    expected = None
 
     try:
-        # সিক্রেটস থেকে পাসওয়ার্ড লিস্ট নিন
-        expected_passwords = st.secrets.get("app_passwords", None)
+        expected = st.secrets.get("app_password", None)
     except Exception:
-        expected_passwords = None
+        expected = None
 
-    # এনভায়রনমেন্ট ভেরিয়েবল থেকে নিন (একটি পাসওয়ার্ড)
-    if expected_passwords is None:
-        env_pass = os.environ.get("PEPCO_APP_PASSWORD")
-        if env_pass:
-            expected_passwords = [env_pass]
+    if expected is None:
+        expected = os.environ.get("PEPCO_APP_PASSWORD")
 
-    if expected_passwords is None:
-        st.error("App passwords not configured. Please set 'app_passwords' in secrets or PEPCO_APP_PASSWORD env var.")
+    if expected is None:
+        st.error("App password not configured. Please set 'app_password' in secrets or PEPCO_APP_PASSWORD env var.")
         return False
 
     def _password_entered():
-        entered = st.session_state.get("password", "")
-        # চেক করুন এন্টার করা পাসওয়ার্ড লিস্টের কোনো একটির সাথে মেলে কিনা
-        if entered in expected_passwords:
+        if st.session_state.get("password") == expected:
             st.session_state["password_correct"] = True
             try:
                 del st.session_state["password"]
@@ -132,7 +126,7 @@ def check_password():
     st.text_input("Enter Your Access Code", type="password", key="password", on_change=_password_entered)
 
     if st.session_state.get("password_correct") is False:
-        st.error("❌ Your password is incorrect. Please contact Mr. Ovi")
+        st.error("Your password Incorrect, Please contact Mr. Ovi")
 
     return False
 
@@ -308,116 +302,78 @@ def get_dept_value(item_class):
 
 
 # ================================================================
-# SIZE MAPPING FUNCTION
+# SIZE FUNCTIONS
 # ================================================================
 
-def map_size_to_csv_size(item_classification, pdf_size):
+def get_size_options(item_classification):
+    """
+    Item Classification অনুযায়ী Size Options ফেরত দেয়
+    """
+    if not item_classification:
+        return ["UNKNOWN"]
+    
+    ic = item_classification.lower()
+    
+    # Baby sizes (0-24 months)
+    if 'baby' in ic:
+        return ['3/6', '6/9', '9/12', '12/18', '18/24', '24/36']
+    
+    # Younger sizes (3-8 years)
+    elif 'younger' in ic:
+        return ['3-4 yrs', '4-5 yrs', '5-6 yrs', '6-7 yrs', '7-8 yrs', '8-9 yrs']
+    
+    # Older sizes (9-15 years)
+    elif 'older' in ic:
+        return ['9 yrs', '10 yrs', '11 yrs', '12 yrs', '13 yrs', '14 yrs', '15 yrs']
+    
+    # Ladies/Mens sizes
+    elif 'ladies' in ic or 'mens' in ic:
+        return ['XS', 'S', 'M', 'L', 'XL']
+    
+    # Default
+    return ['UNKNOWN']
+
+
+def map_pdf_size_to_csv_size(pdf_size, item_classification):
     """
     PDF Size কে CSV Size এ কনভার্ট করা
     """
-    if not item_classification or not pdf_size:
+    if not pdf_size or not item_classification:
         return pdf_size
     
     ic = item_classification.lower()
     pdf_size_str = str(pdf_size).strip()
     
-    # Baby sizes (0-24 months)
     if 'baby' in ic:
         size_map = {
-            '3/6': '74 cm',
-            '6/9': '80 cm',
-            '9/12': '86 cm',
-            '12/18': '92 cm',
-            '18/24': '98 cm',
-            '24/36': '104 cm',
+            '3/6': '74 cm', '6/9': '80 cm', '9/12': '86 cm',
+            '12/18': '92 cm', '18/24': '98 cm', '24/36': '104 cm'
         }
         return size_map.get(pdf_size_str, pdf_size_str)
     
-    # Younger sizes (3-8 years)
     elif 'younger' in ic:
         size_map = {
-            '3-4 yrs': '104 cm',
-            '4-5 yrs': '110 cm',
-            '5-6 yrs': '116 cm',
-            '6-7 yrs': '122 cm',
-            '7-8 yrs': '128 cm',
-            '8-9 yrs': '134 cm',
+            '3-4 yrs': '104 cm', '4-5 yrs': '110 cm', '5-6 yrs': '116 cm',
+            '6-7 yrs': '122 cm', '7-8 yrs': '128 cm', '8-9 yrs': '134 cm'
         }
         return size_map.get(pdf_size_str, pdf_size_str)
     
-    # Older sizes (9-15 years)
     elif 'older' in ic:
         size_map = {
-            '9 yrs': '134 cm',
-            '10 yrs': '140 cm',
-            '11 yrs': '146 cm',
-            '12 yrs': '152 cm',
-            '13 yrs': '158 cm',
-            '14 yrs': '164 cm',
-            '15 yrs': '170 cm',
+            '9 yrs': '134 cm', '10 yrs': '140 cm', '11 yrs': '146 cm',
+            '12 yrs': '152 cm', '13 yrs': '158 cm', '14 yrs': '164 cm',
+            '15 yrs': '170 cm'
         }
         return size_map.get(pdf_size_str, pdf_size_str)
     
-    # Ladies/Mens sizes
     elif 'ladies' in ic or 'mens' in ic:
         size_map = {
-            'XS': 'XS',
-            'S': 'S',
-            'M': 'M',
-            'L': 'L',
-            'XL': 'XL',
+            'XS': 'XS', 'S': 'S', 'M': 'M', 'L': 'L', 'XL': 'XL'
         }
         return size_map.get(pdf_size_str, pdf_size_str)
     
-    # Default: ফেরত পাঠান
     return pdf_size_str
 
-
-def extract_sizes_from_pdf_table(pages_text):
-    """
-    PDF এর SKU NUMBER টেবিল থেকে সরাসরি Size এবং SKU বের করা
-    """
-    sku_size_map = {}
-    
-    for txt in pages_text:
-        # SKU NUMBER টেবিল খোঁজা
-        if "SKU NUMBER" in txt.upper() or "SKU No" in txt:
-            lines = txt.split('\n')
-            
-            # টেবিলের মধ্যে Size গুলো খোঁজা (হেডার লাইন)
-            header_line = ""
-            size_headers = []
-            sku_values = []
-            
-            for i, line in enumerate(lines):
-                # Size হেডার খোঁজা (3/6, 6/9, 9/12 ইত্যাদি)
-                sizes = re.findall(r'(\d+/\d+)', line)
-                if sizes and len(sizes) >= 3:
-                    size_headers = sizes
-                    header_line = line
-                    break
-            
-            # টেবিলের ডাটা লাইন খোঁজা
-            if size_headers:
-                for line in lines:
-                    # SKU গুলো খোঁজা (9 ডিজিট)
-                    skus = re.findall(r'\b(\d{9})\b', line)
-                    if skus:
-                        # প্রতিটি SKU এর সাথে Size ম্যাপ করুন
-                        for i, sku in enumerate(skus):
-                            if i < len(size_headers):
-                                sku_size_map[sku] = size_headers[i]
-        
-        # বিকল্প: টেবিলে SKU No এবং Bar Code আলাদা ভাবে থাকলে
-        if "SKU No" in txt:
-            # SKU No লাইন থেকে SKU গুলো নিন
-            sku_line = re.findall(r'SKU No\s*(\d{9,})', txt, re.IGNORECASE)
-            # Bar Code লাইন থেকে Size গুলো নিন
-            barcode_line = re.findall(r'Bar Code\s*(\d{13})', txt, re.IGNORECASE)
-            
-            # এখানেও ম্যাপ করতে পারেন
-    
-    return sku_size_map
 
 # ================================================================
 # PART 3 — PDF EXTRACTION
@@ -520,31 +476,13 @@ def extract_data_from_pdf(file):
 
         colour = extract_colour_from_pdf_pages(pages_text)
 
-        # ============================================================
-        # SKU, Barcode, এবং Size বের করা
-        # ============================================================
-        
-        # PDF টেবিল থেকে Size গুলো বের করুন
-        sku_size_map = extract_sizes_from_pdf_table(pages_text)
-        
         skus = []
         barcodes = []
         excluded = set()
-        
         for txt in pages_text:
-            # SKU খোঁজা (8 বা 9 ডিজিট)
-            found_skus = re.findall(r"\b\d{8,9}\b", txt)
-            skus.extend(found_skus)
-            
-            # Barcode খোঁজা (13 ডিজিট)
-            found_barcodes = re.findall(r"\b\d{13}\b", txt)
-            barcodes.extend(found_barcodes)
-            
+            skus.extend(re.findall(r"\b\d{8}\b", txt))
+            barcodes.extend(re.findall(r"\b\d{13}\b", txt))
             excluded.update(re.findall(r"barcode:\s*(\d{13})", txt))
-            
-            # SKU NUMBER টেবিল থেকে SKU খোঁজা
-            sku_table = re.findall(r"SKU No\s*(\d{9,})", txt, re.IGNORECASE)
-            skus.extend(sku_table)
 
         def _dedupe(seq):
             seen = set()
@@ -573,12 +511,6 @@ def extract_data_from_pdf(file):
 
         results = []
         for sku, barcode in zip(skus, valid_barcodes):
-            # PDF Size বের করুন
-            pdf_size = sku_size_map.get(str(sku), "UNKNOWN")
-            
-            # CSV Size এ কনভার্ট করুন
-            csv_size = map_size_to_csv_size(item_class_value, pdf_size)
-            
             results.append({
                 "Order_ID": order_id.group(1).strip() if order_id else "UNKNOWN",
                 "Style": style_code.group() if style_code else "UNKNOWN",
@@ -588,8 +520,7 @@ def extract_data_from_pdf(file):
                 "Supplier_name": supplier_name.group(1).strip() if supplier_name else "UNKNOWN",
                 "today_date": datetime.today().strftime('%d-%m-%Y'),
                 "barcode": barcode,
-                "Season": season_value,
-                "Size": csv_size  # ← CSV Size (যেমন: 74 cm)
+                "Season": season_value
             })
         return results
     except Exception as e:
@@ -630,7 +561,6 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     # Department UI
     dept_options = ["Baby Boy", "Baby Girl", "Boys", "Girls", "Women", "Mens"]
     
-    # PDF থেকে ডিফল্ট ডিপার্টমেন্ট সেট করুন
     first_row = result_data[0]
     pdf_item_class = first_row.get("Item_classification", "")
     default_dept_label = map_item_class_to_dept_label(pdf_item_class)
@@ -657,6 +587,28 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
             index=washing_default_index,
             key="ui_wash"
         )
+
+    # ============================================================
+    # SIZE SELECTION UI
+    # ============================================================
+    st.markdown("### 📏 Select Size")
+    
+    # Item Classification থেকে Size Options বের করুন
+    size_options = get_size_options(pdf_item_class)
+    
+    # Size সিলেক্ট করার জন্য Dropdown
+    selected_pdf_size = st.selectbox(
+        "Select Size (PDF Format)",
+        options=size_options,
+        index=0,
+        key="ui_size_pdf"
+    )
+    
+    # সিলেক্ট করা PDF Size কে CSV Size এ কনভার্ট করুন
+    selected_csv_size = map_pdf_size_to_csv_size(selected_pdf_size, pdf_item_class)
+    
+    # ইউজারকে দেখান CSV Size কি হবে
+    st.info(f"📌 CSV Size হবে: **{selected_csv_size}**")
 
     # ============================================================
     # Material Composition
@@ -930,6 +882,9 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     # ============================================================
     # CSV তৈরি
     # ============================================================
+    
+    # Size যোগ করুন (UI থেকে সিলেক্ট করা)
+    df['Size'] = selected_csv_size
     
     # Dept যোগ করুন
     df['Dept'] = df['Item_classification'].apply(get_dept_value)
