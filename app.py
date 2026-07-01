@@ -308,6 +308,106 @@ def get_dept_value(item_class):
 
 
 # ================================================================
+# SIZE MAPPING FUNCTION
+# ================================================================
+
+def map_size_to_csv_size(item_classification, pdf_size):
+    """
+    PDF Size কে CSV Size এ কনভার্ট করা
+    """
+    if not item_classification or not pdf_size:
+        return pdf_size
+    
+    ic = item_classification.lower()
+    pdf_size_str = str(pdf_size).strip()
+    
+    # Baby sizes (0-24 months)
+    if 'baby' in ic:
+        size_map = {
+            '3/6': '74 cm',
+            '6/9': '80 cm',
+            '9/12': '86 cm',
+            '12/18': '92 cm',
+            '18/24': '98 cm',
+            '24/36': '104 cm',
+        }
+        return size_map.get(pdf_size_str, pdf_size_str)
+    
+    # Younger sizes (3-8 years)
+    elif 'younger' in ic:
+        size_map = {
+            '3-4 yrs': '104 cm',
+            '4-5 yrs': '110 cm',
+            '5-6 yrs': '116 cm',
+            '6-7 yrs': '122 cm',
+            '7-8 yrs': '128 cm',
+            '8-9 yrs': '134 cm',
+        }
+        return size_map.get(pdf_size_str, pdf_size_str)
+    
+    # Older sizes (9-15 years)
+    elif 'older' in ic:
+        size_map = {
+            '9 yrs': '134 cm',
+            '10 yrs': '140 cm',
+            '11 yrs': '146 cm',
+            '12 yrs': '152 cm',
+            '13 yrs': '158 cm',
+            '14 yrs': '164 cm',
+            '15 yrs': '170 cm',
+        }
+        return size_map.get(pdf_size_str, pdf_size_str)
+    
+    # Ladies/Mens sizes
+    elif 'ladies' in ic or 'mens' in ic:
+        size_map = {
+            'XS': 'XS',
+            'S': 'S',
+            'M': 'M',
+            'L': 'L',
+            'XL': 'XL',
+        }
+        return size_map.get(pdf_size_str, pdf_size_str)
+    
+    # Default: ফেরত পাঠান
+    return pdf_size_str
+
+
+def extract_sizes_from_pdf_table(pages_text):
+    """
+    PDF এর SKU NUMBER টেবিল থেকে সরাসরি Size এবং SKU বের করা
+    Returns: {'642392076': '3/6', '642392086': '6/9', ...}
+    """
+    sku_size_map = {}
+    
+    for txt in pages_text:
+        # SKU NUMBER টেবিল খোঁজা
+        if "SKU NUMBER" in txt.upper() or "SKU No" in txt:
+            lines = txt.split('\n')
+            current_sizes = []
+            current_skus = []
+            
+            for line in lines:
+                # Size গুলো খোঁজা (3/6, 6/9, 9/12 ইত্যাদি)
+                size_matches = re.findall(r'(\d+/\d+)', line)
+                if size_matches:
+                    current_sizes.extend(size_matches)
+                
+                # SKU গুলো খোঁজা (9 ডিজিটের সংখ্যা)
+                sku_matches = re.findall(r'\b(\d{9})\b', line)
+                if sku_matches:
+                    current_skus.extend(sku_matches)
+            
+            # Size এবং SKU ম্যাচ করা
+            if current_sizes and current_skus:
+                for i, sku in enumerate(current_skus):
+                    if i < len(current_sizes):
+                        sku_size_map[sku] = current_sizes[i]
+    
+    return sku_size_map
+
+
+# ================================================================
 # PART 3 — PDF EXTRACTION
 # ================================================================
 
@@ -373,6 +473,7 @@ def extract_data_from_pdf(file):
         full_text = "\n".join(pages_text)
         page1 = pages_text[0]
 
+        # Item_name_EN
         m_item = re.search(r"Item\s*name\s*English\s*[:\.]{1,}\s*(.+)", full_text, re.IGNORECASE)
         if not m_item:
             m_item = re.search(r"Item\s*name\s*[:\.]{1,}\s*(.+?)\n", full_text, re.IGNORECASE)
@@ -407,13 +508,31 @@ def extract_data_from_pdf(file):
 
         colour = extract_colour_from_pdf_pages(pages_text)
 
+        # ============================================================
+        # SKU, Barcode, এবং Size বের করা
+        # ============================================================
+        
+        # PDF টেবিল থেকে Size গুলো বের করুন
+        sku_size_map = extract_sizes_from_pdf_table(pages_text)
+        
         skus = []
         barcodes = []
         excluded = set()
+        
         for txt in pages_text:
-            skus.extend(re.findall(r"\b\d{8}\b", txt))
-            barcodes.extend(re.findall(r"\b\d{13}\b", txt))
+            # SKU খোঁজা (8 বা 9 ডিজিট)
+            found_skus = re.findall(r"\b\d{8,9}\b", txt)
+            skus.extend(found_skus)
+            
+            # Barcode খোঁজা (13 ডিজিট)
+            found_barcodes = re.findall(r"\b\d{13}\b", txt)
+            barcodes.extend(found_barcodes)
+            
             excluded.update(re.findall(r"barcode:\s*(\d{13})", txt))
+            
+            # SKU NUMBER টেবিল থেকে SKU খোঁজা
+            sku_table = re.findall(r"SKU No\s*(\d{9,})", txt, re.IGNORECASE)
+            skus.extend(sku_table)
 
         def _dedupe(seq):
             seen = set()
@@ -442,6 +561,12 @@ def extract_data_from_pdf(file):
 
         results = []
         for sku, barcode in zip(skus, valid_barcodes):
+            # PDF Size বের করুন
+            pdf_size = sku_size_map.get(str(sku), "UNKNOWN")
+            
+            # CSV Size এ কনভার্ট করুন
+            csv_size = map_size_to_csv_size(item_class_value, pdf_size)
+            
             results.append({
                 "Order_ID": order_id.group(1).strip() if order_id else "UNKNOWN",
                 "Style": style_code.group() if style_code else "UNKNOWN",
@@ -451,7 +576,8 @@ def extract_data_from_pdf(file):
                 "Supplier_name": supplier_name.group(1).strip() if supplier_name else "UNKNOWN",
                 "today_date": datetime.today().strftime('%d-%m-%Y'),
                 "barcode": barcode,
-                "Season": season_value
+                "Season": season_value,
+                "Size": csv_size  # ← CSV Size (যেমন: 74 cm)
             })
         return results
     except Exception as e:
@@ -834,11 +960,11 @@ Uvoznik za Srbiju: Pepco d.o.o., Pariske komune 22, 11070 Beograd-Novi Beograd. 
     # SKU_Name তৈরি - barcode থেকে
     df['SKU_Name'] = df['barcode'].astype(str)
 
-    # CSV এর কলাম - Dept যোগ করা হয়েছে
+    # CSV এর কলাম - Size যোগ করা হয়েছে
     final_cols = [
         "Order_ID", "Style", "Colour", "Supplier_product_code", "Item_classification",
         "Supplier_name", "today_date",
-        "barcode", "SKU_Name", "washing_code",
+        "barcode", "Size", "SKU_Name", "washing_code",
         "Season", "Composition_Care", "Dept"
     ]
 
