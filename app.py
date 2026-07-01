@@ -376,7 +376,6 @@ def map_size_to_csv_size(item_classification, pdf_size):
 def extract_sizes_from_pdf_table(pages_text):
     """
     PDF এর SKU NUMBER টেবিল থেকে সরাসরি Size এবং SKU বের করা
-    Returns: {'642392076': '3/6', '642392086': '6/9', ...}
     """
     sku_size_map = {}
     
@@ -384,28 +383,41 @@ def extract_sizes_from_pdf_table(pages_text):
         # SKU NUMBER টেবিল খোঁজা
         if "SKU NUMBER" in txt.upper() or "SKU No" in txt:
             lines = txt.split('\n')
-            current_sizes = []
-            current_skus = []
             
-            for line in lines:
-                # Size গুলো খোঁজা (3/6, 6/9, 9/12 ইত্যাদি)
-                size_matches = re.findall(r'(\d+/\d+)', line)
-                if size_matches:
-                    current_sizes.extend(size_matches)
-                
-                # SKU গুলো খোঁজা (9 ডিজিটের সংখ্যা)
-                sku_matches = re.findall(r'\b(\d{9})\b', line)
-                if sku_matches:
-                    current_skus.extend(sku_matches)
+            # টেবিলের মধ্যে Size গুলো খোঁজা (হেডার লাইন)
+            header_line = ""
+            size_headers = []
+            sku_values = []
             
-            # Size এবং SKU ম্যাচ করা
-            if current_sizes and current_skus:
-                for i, sku in enumerate(current_skus):
-                    if i < len(current_sizes):
-                        sku_size_map[sku] = current_sizes[i]
+            for i, line in enumerate(lines):
+                # Size হেডার খোঁজা (3/6, 6/9, 9/12 ইত্যাদি)
+                sizes = re.findall(r'(\d+/\d+)', line)
+                if sizes and len(sizes) >= 3:
+                    size_headers = sizes
+                    header_line = line
+                    break
+            
+            # টেবিলের ডাটা লাইন খোঁজা
+            if size_headers:
+                for line in lines:
+                    # SKU গুলো খোঁজা (9 ডিজিট)
+                    skus = re.findall(r'\b(\d{9})\b', line)
+                    if skus:
+                        # প্রতিটি SKU এর সাথে Size ম্যাপ করুন
+                        for i, sku in enumerate(skus):
+                            if i < len(size_headers):
+                                sku_size_map[sku] = size_headers[i]
+        
+        # বিকল্প: টেবিলে SKU No এবং Bar Code আলাদা ভাবে থাকলে
+        if "SKU No" in txt:
+            # SKU No লাইন থেকে SKU গুলো নিন
+            sku_line = re.findall(r'SKU No\s*(\d{9,})', txt, re.IGNORECASE)
+            # Bar Code লাইন থেকে Size গুলো নিন
+            barcode_line = re.findall(r'Bar Code\s*(\d{13})', txt, re.IGNORECASE)
+            
+            # এখানেও ম্যাপ করতে পারেন
     
     return sku_size_map
-
 
 # ================================================================
 # PART 3 — PDF EXTRACTION
