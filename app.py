@@ -308,10 +308,6 @@ def get_dept_value(item_class):
     return ""
 
 
-# ================================================================
-# SIZE FUNCTIONS
-# ================================================================
-
 def get_size_options(item_classification):
     """
     Item Classification অনুযায়ী Size Options ফেরত দেয়
@@ -329,13 +325,32 @@ def get_size_options(item_classification):
     elif 'younger' in ic:
         return ['3-4 yrs', '4-5 yrs', '5-6 yrs', '6-7 yrs', '7-8 yrs', '8-9 yrs']
     
-    # Older sizes (9-15 years)
+    # Older sizes - Sheet অনুযায়ী ২ ধরনের Size
     elif 'older' in ic:
-        return ['9 yrs', '10 yrs', '11 yrs', '12 yrs', '13 yrs', '14 yrs', '15 yrs']
+        # Check যদি Top Size হয় (T-shirt, Shirt, Top ইত্যাদি)
+        if 't-shirt' in ic or 'shirt' in ic or 'top' in ic or 'blouse' in ic:
+            # Top Size
+            return [
+                '9 - 10 yrs',   # 134/140 cm
+                '11 - 12 yrs',  # 146/152 cm
+                '13 - 14 yrs',  # 158/164 cm
+                '15 yrs'        # 170 cm
+            ]
+        else:
+            # Bottom Size (Jog suit, Pants, Leggings, Outerwear ইত্যাদি)
+            return [
+                '9 yrs',    # 134 cm
+                '10 yrs',   # 140 cm
+                '11 yrs',   # 146 cm
+                '12 yrs',   # 152 cm
+                '13 yrs',   # 158 cm
+                '14 yrs',   # 164 cm
+                '15 yrs'    # 170 cm
+            ]
     
     # Ladies/Mens sizes
     elif 'ladies' in ic or 'mens' in ic:
-        return ['XS', 'S', 'M', 'L', 'XL']
+        return ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL']
     
     # Default
     return ['UNKNOWN']
@@ -375,17 +390,27 @@ def map_pdf_size_to_csv_size(pdf_size, item_classification):
         }
         return size_map.get(pdf_size_str, pdf_size_str)
     
-    # Older sizes mapping
+    # Older sizes mapping - Sheet অনুযায়ী ২ ধরনের Size
     elif 'older' in ic:
-        size_map = {
-            '9 yrs': '134 cm',
-            '10 yrs': '140 cm',
-            '11 yrs': '146 cm',
-            '12 yrs': '152 cm',
-            '13 yrs': '158 cm',
-            '14 yrs': '164 cm',
-            '15 yrs': '170 cm'
-        }
+        # Top Size mapping
+        if 't-shirt' in ic or 'shirt' in ic or 'top' in ic or 'blouse' in ic:
+            size_map = {
+                '9 - 10 yrs': '134/140 cm',
+                '11 - 12 yrs': '146/152 cm',
+                '13 - 14 yrs': '158/164 cm',
+                '15 yrs': '170 cm'
+            }
+        else:
+            # Bottom Size mapping
+            size_map = {
+                '9 yrs': '134 cm',
+                '10 yrs': '140 cm',
+                '11 yrs': '146 cm',
+                '12 yrs': '152 cm',
+                '13 yrs': '158 cm',
+                '14 yrs': '164 cm',
+                '15 yrs': '170 cm'
+            }
         return size_map.get(pdf_size_str, pdf_size_str)
     
     # Ladies/Mens sizes mapping
@@ -395,7 +420,9 @@ def map_pdf_size_to_csv_size(pdf_size, item_classification):
             'S': 'S',
             'M': 'M',
             'L': 'L',
-            'XL': 'XL'
+            'XL': 'XL',
+            'XXL': 'XXL',
+            '3XL': '3XL'
         }
         return size_map.get(pdf_size_str, pdf_size_str)
     
@@ -718,7 +745,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
                 if text:
                     text = text[0].upper() + text[1:] if len(text) > 1 else text.upper()
                 translations.append(text)
-        return f"{pct}% {' / '.join(translations)}"
+        return f"{pct}% {'/ '.join(translations)}"
     
     def get_component_name_translations(comp_name):
         if comp_translations_df.empty:
@@ -735,7 +762,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
                     if text:
                         text = text[0].upper() + text[1:] if len(text) > 1 else text.upper()
                     translations.append(text)
-        return " / ".join(translations)
+        return "/ ".join(translations)
     
     def get_care_instruction_all_languages(inst_text, care_instructions_df):
         if not inst_text or care_instructions_df.empty:
@@ -752,7 +779,7 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
                 if text:
                     text = text[0].upper() + text[1:] if len(text) > 1 else text.upper()
                 translations.append(text)
-        return " / ".join(translations)
+        return "/ ".join(translations)
     
     def build_material_line(materials, use_translation=True):
         parts = []
@@ -964,17 +991,18 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     shrinkage_line = "Skupljanje:  po dužini: 4%, po širini 4%"
 
     # Bangladesh/Produced by লাইন যোগ করুন
-    bangladesh_line = """Bangladesh/ Произведено в Бангладеш/ Fabricado en Bangladesh/ Κατασκευάζεται στην Μπαγκλαντές/ Pagaminta Bangladeše/ Ražots Bangladešā/ Произведено во Бангладеш/ Proizvedeno u Bangladešu/ Zemlja izvoza: EU/ Виготовлено в Бангладеш.
+    bangladesh_line = """Made in Bangladesh/ Vendi i Origjinës: Bangladesh/ Произведено в Бангладеш/ Fabricado en Bangladesh/ Κατασκευάζεται στην Μπαγκλαντές/ Pagaminta Bangladeše/ Ražots Bangladešā/ Wyprodukowano w Bangladeszu/ Произведено во Бангладеш/ Proizvedeno u Bangladešu/ Zemlja izvoza: EU/ Виготовлено в Бангладеш.
 
 Produced by/ Prodhuesi/ Производител/ Výrobce/ Hersteller/ Tootja/ Fabricante/
 Fabricant/ Κατασκευαστής/ Proizvođač/ Gyártó/ Produttore/ Gamintojas/ Ražotājs/ Producent/ Producător/ Izdelovalec/ Výrobca/ Виробник:
 
-Pepco Poland Sp. z o.o., ul. Strzeszyńska 73A, 60-479 Poznań Poland, klient@pepco.eu,
-NIP (NIF) 782-21-31-157.
+
+Pepco Poland Sp. z o.o., ul. Strzeszyńska 73A, 60-479 Poznań Poland, klient@pepco.eu, NIP (NIF) 782-21-31-157.
 Пепко Полска Сп. з o.o., ул. Стрзесзинска 73А, 60-479 Познан. Пепко Польска Сп. з.о.о., вул Стшешинська 73A, 60-479 Познань. Na tržište RH stavlja: Pepco Croatia d.o.o., D. T. Gavrana 11, 10020 Zagreb.
 Uvoznik za Srbiju: Pepco d.o.o., Pariske komune 22, 11070 Beograd-Novi Beograd. klijent.rs@pepco.eu
 Διανομέας: Pepco Greece Μονοπρόσωπη Ι.Κ.Ε., Πέτρου Ράλλη 97, 182 33, Αγ. Ιωάννης Ρέντης. Uvoznik za BiH: Pepco B-H d.o.o., ulica Skenderpašina br. 1, Opština Centar Sarajevo, 71 000 Sarajevo. klijent.ba@pepco.eu
-Увозник/ Importuesi: ПЕПЦО ДООЕЛ Скопје, Ул. НАУМ НАУМОВСКИ - БОРЧЕ Бр.40/5-8 СКОПЈЕ - ЦЕНТАР ЦЕНТАР/ PEPCO DOOEL Shkup, Rruga Naum Naumovski-Borche Nr. 40/5-8, Shkup – Qendër, Maqedonia e Veriut."""
+Увозник/ Importuesi: ПЕПЦО ДООЕЛ Скопје, Ул. НАУМ НАУМОВСКИ - БОРЧЕ Бр.40/5-8 СКОПЈЕ - ЦЕНТАР ЦЕНТАР/ PEPCO DOOEL Shkup, Rruga Naum Naumovski-Borche Nr. 40/5-8, Shkup – Qendër, Maqedonia e Veriut. Імпортер: ТОВАРИСТВО З ОБМЕЖЕНОЮ ВІДПОВІДАЛЬНІСТЮ “ПЕПКО УКРАЇНА” вул. Загородня, 15,
+м. Київ, 03150, Україна, customer@pepco.eu"""
 
     # সবকিছু একসাথে যোগ করুন
     if combined_care:
@@ -1000,7 +1028,7 @@ Uvoznik za Srbiju: Pepco d.o.o., Pariske komune 22, 11070 Beograd-Novi Beograd. 
             df[col] = ""
 
     st.success("✅ Done! Product data processed successfully.")
-    st.subheader("✏️ Edit Before Download")
+    st.subheader("Edit Before Download")
     edited_df = st.data_editor(df[final_cols])
 
     # CSV Download
