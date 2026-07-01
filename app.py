@@ -92,32 +92,26 @@ div[data-testid="stNumberInput"] input{
 
 
 # ================================================================
-# PASSWORD CHECK SYSTEM (MULTIPLE PASSWORDS SUPPORT)
+#  PASSWORD CHECK SYSTEM
 # ================================================================
 def check_password():
-    """Password gate supporting multiple passwords from secrets."""
-    expected_passwords = None
+    """Simple password gate using secrets or environment."""
+    expected = None
 
     try:
-        # সিক্রেটস থেকে পাসওয়ার্ড লিস্ট নিন
-        expected_passwords = st.secrets.get("app_passwords", None)
+        expected = st.secrets.get("app_password", None)
     except Exception:
-        expected_passwords = None
+        expected = None
 
-    # এনভায়রনমেন্ট ভেরিয়েবল থেকে নিন (একটি পাসওয়ার্ড)
-    if expected_passwords is None:
-        env_pass = os.environ.get("PEPCO_APP_PASSWORD")
-        if env_pass:
-            expected_passwords = [env_pass]
+    if expected is None:
+        expected = os.environ.get("PEPCO_APP_PASSWORD")
 
-    if expected_passwords is None:
-        st.error("App passwords not configured. Please set 'app_passwords' in secrets or PEPCO_APP_PASSWORD env var.")
+    if expected is None:
+        st.error("App password not configured. Please set 'app_password' in secrets or PEPCO_APP_PASSWORD env var.")
         return False
 
     def _password_entered():
-        entered = st.session_state.get("password", "")
-        # চেক করুন এন্টার করা পাসওয়ার্ড লিস্টের কোনো একটির সাথে মেলে কিনা
-        if entered in expected_passwords:
+        if st.session_state.get("password") == expected:
             st.session_state["password_correct"] = True
             try:
                 del st.session_state["password"]
@@ -132,7 +126,7 @@ def check_password():
     st.text_input("Enter Your Access Code", type="password", key="password", on_change=_password_entered)
 
     if st.session_state.get("password_correct") is False:
-        st.error("❌ Your password is incorrect. Please contact Mr. Ovi")
+        st.error("Your password Incorrect, Please contact Mr. Ovi")
 
     return False
 
@@ -243,6 +237,71 @@ def load_material_translations():
 
 
 # ================================================================
+#  HELPER FUNCTIONS - Department & Classification
+# ================================================================
+
+def get_classification_type(item_class):
+    if not item_class:
+        return None
+    ic = item_class.lower()
+    if 'younger girls outerwear' in ic:
+        return 'yg'
+    if 'older girls outerwear' in ic:
+        return 'og'
+    if 'younger boys outerwear' in ic:
+        return 'yb'
+    if 'older boys outerwear' in ic:
+        return 'ob'
+    if 'baby girls outerwear' in ic:
+        return 'a'
+    if 'baby boys outerwear' in ic:
+        return 'b'
+    if 'baby girls essentials' in ic:
+        return 'd_girls'
+    if 'baby boys essentials' in ic:
+        return 'd'
+    if 'ladies outerwear' in ic:
+        return 'l'
+    if 'mens outerwear' in ic:
+        return 'm'
+    return None
+
+def map_item_class_to_dept_label(item_class):
+    if not item_class:
+        return None
+    ic = item_class.lower()
+    if 'baby boys outerwear' in ic or 'baby boys essentials' in ic:
+        return "Baby Boy"
+    if 'baby girls outerwear' in ic or 'baby girls essentials' in ic:
+        return "Baby Girl"
+    if 'younger boys outerwear' in ic or 'older boys outerwear' in ic:
+        return "Boys"
+    if 'younger girls outerwear' in ic or 'older girls outerwear' in ic:
+        return "Girls"
+    if 'ladies outerwear' in ic:
+        return "Women"
+    if 'mens outerwear' in ic:
+        return "Mens"
+    return None
+
+def get_dept_value(item_class):
+    if not item_class:
+        return ""
+    ic = item_class.lower()
+    if any(x in ic for x in ['baby boys', 'baby girls']):
+        return "BABY"
+    if any(x in ic for x in ['younger boys', 'younger girls']):
+        return "KIDS"
+    if any(x in ic for x in ['older girls', 'older boys']):
+        return "TEENS"
+    if 'ladies outerwear' in ic:
+        return "WOMEN"
+    if 'mens outerwear' in ic:
+        return "MEN"
+    return ""
+
+
+# ================================================================
 # PART 3 — PDF EXTRACTION
 # ================================================================
 
@@ -308,7 +367,6 @@ def extract_data_from_pdf(file):
         full_text = "\n".join(pages_text)
         page1 = pages_text[0]
 
-        # Item_name_EN - রাখা হয়েছে
         m_item = re.search(r"Item\s*name\s*English\s*[:\.]{1,}\s*(.+)", full_text, re.IGNORECASE)
         if not m_item:
             m_item = re.search(r"Item\s*name\s*[:\.]{1,}\s*(.+?)\n", full_text, re.IGNORECASE)
@@ -422,14 +480,40 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         df['Order_ID'] = df['Order_ID'].astype(str) + "+" + extra_order_ids
 
     # ============================================================
-    # UI - শুধু Washing Code
+    # UI - Select Department + Washing Code
     # ============================================================
-    # ============================================================
-# UI - শুধু Washing Code (ডিফল্ট 9)
-# ============================================================
-    washing_options = list(WASHING_CODES.keys())
-    washing_default_index = washing_options.index('9') if '9' in washing_options else 0
-    washing_code_key = st.selectbox("Select Washing Code", options=washing_options, index=washing_default_index, key="ui_wash")
+    
+    # Department UI
+    dept_options = ["Baby Boy", "Baby Girl", "Boys", "Girls", "Women", "Mens"]
+    
+    # PDF থেকে ডিফল্ট ডিপার্টমেন্ট সেট করুন
+    first_row = result_data[0]
+    pdf_item_class = first_row.get("Item_classification", "")
+    default_dept_label = map_item_class_to_dept_label(pdf_item_class)
+    default_dept_index = 0
+    if default_dept_label and default_dept_label in dept_options:
+        default_dept_index = dept_options.index(default_dept_label)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        selected_dept = st.selectbox(
+            "Select Department", 
+            options=dept_options, 
+            index=default_dept_index,
+            key="ui_dept"
+        )
+    
+    with col2:
+        washing_options = list(WASHING_CODES.keys())
+        washing_default_index = washing_options.index('9') if '9' in washing_options else 0
+        washing_code_key = st.selectbox(
+            "Select Washing Code", 
+            options=washing_options, 
+            index=washing_default_index,
+            key="ui_wash"
+        )
+
     # ============================================================
     # Material Composition
     # ============================================================
@@ -480,7 +564,6 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
             val = row.iloc[0].get(col, "")
             if pd.notna(val) and str(val).strip() and val != mat_name:
                 text = str(val).strip()
-            # প্রথম লেটার ক্যাপিটাল করুন
                 if text:
                     text = text[0].upper() + text[1:] if len(text) > 1 else text.upper()
                 translations.append(text)
@@ -497,8 +580,11 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
             if col != 'EN':
                 val = row.iloc[0].get(col, "")
                 if pd.notna(val) and str(val).strip():
-                    translations.append(str(val).strip())
-        return "/ ".join(translations)
+                    text = str(val).strip()
+                    if text:
+                        text = text[0].upper() + text[1:] if len(text) > 1 else text.upper()
+                    translations.append(text)
+        return " / ".join(translations)
     
     def get_care_instruction_all_languages(inst_text, care_instructions_df):
         if not inst_text or care_instructions_df.empty:
@@ -512,11 +598,10 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
             val = row.iloc[0].get(col, "")
             if pd.notna(val) and str(val).strip():
                 text = str(val).strip()
-           
                 if text:
                     text = text[0].upper() + text[1:] if len(text) > 1 else text.upper()
                 translations.append(text)
-        return "/ ".join(translations)
+        return " / ".join(translations)
     
     def build_material_line(materials, use_translation=True):
         parts = []
@@ -524,7 +609,6 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
             if m["mat"] and m["pct"] > 0:
                 if use_translation:
                     mat_text = get_material_all_languages(m["mat"], m["pct"])
-                
                     if mat_text:
                         mat_text = mat_text[0].upper() + mat_text[1:] if len(mat_text) > 1 else mat_text.upper()
                 else:
@@ -699,25 +783,29 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     
     care_inst_translated = "\n\n".join(all_care_inst_translated) if all_care_inst_translated else ""
 
-# ============================================================
-# CSV তৈরি
-# ============================================================
-df['washing_code'] = WASHING_CODES[washing_code_key]
+    # ============================================================
+    # CSV তৈরি
+    # ============================================================
     
-# 1. কম্পোজিশন + কেয়ার ইন্সট্রাকশন
-combined_care = ""
-if final_composition_text and care_inst_translated:
-    combined_care = f"{final_composition_text}\n\n{care_inst_translated}"
-elif final_composition_text:
-    combined_care = final_composition_text
-elif care_inst_translated:
-    combined_care = care_inst_translated
+    # Dept যোগ করুন
+    df['Dept'] = df['Item_classification'].apply(get_dept_value)
+    
+    df['washing_code'] = WASHING_CODES[washing_code_key]
+    
+    # কম্পোজিশন + কেয়ার ইন্সট্রাকশন
+    combined_care = ""
+    if final_composition_text and care_inst_translated:
+        combined_care = f"{final_composition_text}\n\n{care_inst_translated}"
+    elif final_composition_text:
+        combined_care = final_composition_text
+    elif care_inst_translated:
+        combined_care = care_inst_translated
 
-# 2. Skupljanje লাইন যোগ করুন
-shrinkage_line = "Skupljanje:  po dužini: 4%, po širini 4%"
+    # Skupljanje লাইন যোগ করুন
+    shrinkage_line = "Skupljanje:  po dužini: 4%, po širini 4%"
 
-# 3. Bangladesh/Produced by লাইন যোগ করুন
-bangladesh_line = """Bangladesh/ Произведено в Бангладеш/ Fabricado en Bangladesh/ Κατασκευάζεται στην Μπαγκλαντές/ Pagaminta Bangladeše/ Ražots Bangladešā/ Произведено во Бангладеш/ Proizvedeno u Bangladešu/ Zemlja izvoza: EU/ Виготовлено в Бангладеш.
+    # Bangladesh/Produced by লাইন যোগ করুন
+    bangladesh_line = """Bangladesh/ Произведено в Бангладеш/ Fabricado en Bangladesh/ Κατασκευάζεται στην Μπαγκλαντές/ Pagaminta Bangladeše/ Ražots Bangladešā/ Произведено во Бангладеш/ Proizvedeno u Bangladešu/ Zemlja izvoza: EU/ Виготовлено в Бангладеш.
 
 Produced by/ Prodhuesi/ Производител/ Výrobce/ Hersteller/ Tootja/ Fabricante/
 Fabricant/ Κατασκευαστής/ Proizvođač/ Gyártó/ Produttore/ Gamintojas/ Ražotājs/ Producent/ Producător/ Izdelovalec/ Výrobca/ Виробник:
@@ -729,54 +817,55 @@ Uvoznik za Srbiju: Pepco d.o.o., Pariske komune 22, 11070 Beograd-Novi Beograd. 
 Διανομέας: Pepco Greece Μονοπρόσωπη Ι.Κ.Ε., Πέτρου Ράλλη 97, 182 33, Αγ. Ιωάννης Ρέντης. Uvoznik za BiH: Pepco B-H d.o.o., ulica Skenderpašina br. 1, Opština Centar Sarajevo, 71 000 Sarajevo. klijent.ba@pepco.eu
 Увозник/ Importuesi: ПЕПЦО ДООЕЛ Скопје, Ул. НАУМ НАУМОВСКИ - БОРЧЕ Бр.40/5-8 СКОПЈЕ - ЦЕНТАР ЦЕНТАР/ PEPCO DOOEL Shkup, Rruga Naum Naumovski-Borche Nr. 40/5-8, Shkup – Qendër, Maqedonia e Veriut."""
 
-# সবকিছু একসাথে যোগ করুন
-if combined_care:
-    combined_care = f"{combined_care}\n\n{shrinkage_line}\n\n{bangladesh_line}"
-else:
-    combined_care = f"{shrinkage_line}\n\n{bangladesh_line}"
+    # সবকিছু একসাথে যোগ করুন
+    if combined_care:
+        combined_care = f"{combined_care}\n\n{shrinkage_line}\n\n{bangladesh_line}"
+    else:
+        combined_care = f"{shrinkage_line}\n\n{bangladesh_line}"
 
-df['Composition_Care'] = combined_care
+    df['Composition_Care'] = combined_care
 
-# SKU_Name তৈরি - barcode থেকে
-df['SKU_Name'] = df['barcode'].astype(str)
+    # SKU_Name তৈরি - barcode থেকে
+    df['SKU_Name'] = df['barcode'].astype(str)
 
-# CSV এর কলাম
-final_cols = [
-    "Order_ID", "Style", "Colour", "Supplier_product_code", "Item_classification",
-    "Supplier_name", "today_date",
-    "barcode", "SKU_Name", "washing_code",
-    "Season", "Composition_Care"
-]
+    # CSV এর কলাম - Dept যোগ করা হয়েছে
+    final_cols = [
+        "Order_ID", "Style", "Colour", "Supplier_product_code", "Item_classification",
+        "Supplier_name", "today_date",
+        "barcode", "SKU_Name", "washing_code",
+        "Season", "Composition_Care", "Dept"
+    ]
 
-for col in final_cols:
-    if col not in df.columns:
-        df[col] = ""
+    for col in final_cols:
+        if col not in df.columns:
+            df[col] = ""
 
-st.success("✅ Done! Product data processed successfully.")
-st.subheader("✏️ Edit Before Download")
-edited_df = st.data_editor(df[final_cols])
+    st.success("✅ Done! Product data processed successfully.")
+    st.subheader("✏️ Edit Before Download")
+    edited_df = st.data_editor(df[final_cols])
 
-# CSV Download
-csv_buffer = StringIO()
-writer = pycsv.writer(csv_buffer, delimiter=';', quoting=pycsv.QUOTE_ALL)
-writer.writerow(final_cols)
-for row in edited_df.itertuples(index=False):
-    writer.writerow(row)
+    # CSV Download
+    csv_buffer = StringIO()
+    writer = pycsv.writer(csv_buffer, delimiter=';', quoting=pycsv.QUOTE_ALL)
+    writer.writerow(final_cols)
+    for row in edited_df.itertuples(index=False):
+        writer.writerow(row)
 
-first_row_df = df.iloc[0]
-season_val = first_row_df.get("Season", "UNKNOWN").upper()
-all_skus = df['SKU_Name'].tolist()
-sku_val = "_".join(all_skus) if all_skus else "UNKNOWN"
-supplier_code = first_row_df.get("Supplier_product_code", "UNKNOWN")
-style_val = first_row_df.get("Style", "UNKNOWN")
-custom_filename = f"PEPCO_{season_val}_{sku_val}_Swingtag {supplier_code}_00_{style_val}.csv"
+    first_row_df = df.iloc[0]
+    season_val = first_row_df.get("Season", "UNKNOWN").upper()
+    all_skus = df['SKU_Name'].tolist()
+    sku_val = "_".join(all_skus) if all_skus else "UNKNOWN"
+    supplier_code = first_row_df.get("Supplier_product_code", "UNKNOWN")
+    style_val = first_row_df.get("Style", "UNKNOWN")
+    custom_filename = f"PEPCO_{season_val}_{sku_val}_Swingtag {supplier_code}_00_{style_val}.csv"
 
-st.download_button(
-    "📥 Download CSV",
-    csv_buffer.getvalue().encode('utf-8-sig'),
-    file_name=custom_filename,
-    mime="text/csv"
-)
+    st.download_button(
+        "📥 Download CSV",
+        csv_buffer.getvalue().encode('utf-8-sig'),
+        file_name=custom_filename,
+        mime="text/csv"
+    )
+
 
 # ================================================================
 #  PEPCO SECTION (Uploader + Reset)
