@@ -351,35 +351,69 @@ def map_pdf_size_to_csv_size(pdf_size, item_classification):
     ic = item_classification.lower()
     pdf_size_str = str(pdf_size).strip()
     
+    # Baby sizes mapping
     if 'baby' in ic:
         size_map = {
-            '3/6': '74 cm', '6/9': '80 cm', '9/12': '86 cm',
-            '12/18': '92 cm', '18/24': '98 cm', '24/36': '104 cm'
+            '3/6': '74 cm',
+            '6/9': '80 cm',
+            '9/12': '86 cm',
+            '12/18': '92 cm',
+            '18/24': '98 cm',
+            '24/36': '104 cm'
         }
         return size_map.get(pdf_size_str, pdf_size_str)
     
+    # Younger sizes mapping
     elif 'younger' in ic:
         size_map = {
-            '3-4 yrs': '104 cm', '4-5 yrs': '110 cm', '5-6 yrs': '116 cm',
-            '6-7 yrs': '122 cm', '7-8 yrs': '128 cm', '8-9 yrs': '134 cm'
+            '3-4 yrs': '104 cm',
+            '4-5 yrs': '110 cm',
+            '5-6 yrs': '116 cm',
+            '6-7 yrs': '122 cm',
+            '7-8 yrs': '128 cm',
+            '8-9 yrs': '134 cm'
         }
         return size_map.get(pdf_size_str, pdf_size_str)
     
+    # Older sizes mapping
     elif 'older' in ic:
         size_map = {
-            '9 yrs': '134 cm', '10 yrs': '140 cm', '11 yrs': '146 cm',
-            '12 yrs': '152 cm', '13 yrs': '158 cm', '14 yrs': '164 cm',
+            '9 yrs': '134 cm',
+            '10 yrs': '140 cm',
+            '11 yrs': '146 cm',
+            '12 yrs': '152 cm',
+            '13 yrs': '158 cm',
+            '14 yrs': '164 cm',
             '15 yrs': '170 cm'
         }
         return size_map.get(pdf_size_str, pdf_size_str)
     
+    # Ladies/Mens sizes mapping
     elif 'ladies' in ic or 'mens' in ic:
         size_map = {
-            'XS': 'XS', 'S': 'S', 'M': 'M', 'L': 'L', 'XL': 'XL'
+            'XS': 'XS',
+            'S': 'S',
+            'M': 'M',
+            'L': 'L',
+            'XL': 'XL'
         }
         return size_map.get(pdf_size_str, pdf_size_str)
     
     return pdf_size_str
+
+
+def get_selected_sizes(from_size, to_size, size_options):
+    """From এবং To এর মধ্যে সব Size বের করে"""
+    if from_size not in size_options or to_size not in size_options:
+        return [size_options[0]] if size_options else []
+    
+    from_index = size_options.index(from_size)
+    to_index = size_options.index(to_size)
+    
+    if from_index <= to_index:
+        return size_options[from_index:to_index + 1]
+    else:
+        return size_options[to_index:from_index + 1]
 
 
 # ================================================================
@@ -562,20 +596,24 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
         df['Order_ID'] = df['Order_ID'].astype(str) + "+" + extra_order_ids
 
     # ============================================================
-    # UI - Select Department + Washing Code
+    # UI - Select Department + Washing Code + Select Size (1 line)
     # ============================================================
-    
-    # Department UI
-    dept_options = ["Baby Boy", "Baby Girl", "Boys", "Girls", "Women", "Mens"]
     
     first_row = result_data[0]
     pdf_item_class = first_row.get("Item_classification", "")
+    
+    # Department Options
+    dept_options = ["Baby Boy", "Baby Girl", "Boys", "Girls", "Women", "Mens"]
     default_dept_label = map_item_class_to_dept_label(pdf_item_class)
     default_dept_index = 0
     if default_dept_label and default_dept_label in dept_options:
         default_dept_index = dept_options.index(default_dept_label)
     
-    col1, col2 = st.columns(2)
+    # Size Options
+    size_options = get_size_options(pdf_item_class)
+    
+    # 3 columns in 1 line
+    col1, col2, col3 = st.columns(3)
     
     with col1:
         selected_dept = st.selectbox(
@@ -594,28 +632,38 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
             index=washing_default_index,
             key="ui_wash"
         )
-
-    # ============================================================
-    # SIZE SELECTION UI
-    # ============================================================
-    st.markdown("### 📏 Select Size")
     
-    # Item Classification থেকে Size Options বের করুন
-    size_options = get_size_options(pdf_item_class)
-    
-    # Size সিলেক্ট করার জন্য Dropdown
-    selected_pdf_size = st.selectbox(
-        "Select Size (PDF Format)",
-        options=size_options,
-        index=0,
-        key="ui_size_pdf"
-    )
-    
-    # সিলেক্ট করা PDF Size কে CSV Size এ কনভার্ট করুন
-    selected_csv_size = map_pdf_size_to_csv_size(selected_pdf_size, pdf_item_class)
-    
-    # ইউজারকে দেখান CSV Size কি হবে
-    st.info(f"📌 CSV Size হবে: **{selected_csv_size}**")
+    with col3:
+        # Size Range Selection - 2 Dropdowns in one column
+        st.markdown("##### Select Size Range")
+        size_col1, size_col2 = st.columns(2)
+        
+        with size_col1:
+            from_size = st.selectbox(
+                "From",
+                options=size_options,
+                index=0,
+                key="ui_size_from"
+            )
+        
+        with size_col2:
+            to_size = st.selectbox(
+                "To",
+                options=size_options,
+                index=len(size_options) - 1 if size_options else 0,
+                key="ui_size_to"
+            )
+        
+        # Selected sizes
+        selected_pdf_sizes = get_selected_sizes(from_size, to_size, size_options)
+        selected_csv_sizes = []
+        for pdf_size in selected_pdf_sizes:
+            csv_size = map_pdf_size_to_csv_size(pdf_size, pdf_item_class)
+            selected_csv_sizes.append(csv_size)
+        
+        # Show selected sizes info
+        if selected_pdf_sizes:
+            st.caption(f"📌 {', '.join(selected_csv_sizes)}")
 
     # ============================================================
     # Material Composition
@@ -891,7 +939,12 @@ def process_pepco_pdf(uploaded_pdf, extra_order_ids: str | None = None):
     # ============================================================
     
     # Size যোগ করুন (UI থেকে সিলেক্ট করা)
-    df['Size'] = selected_csv_size
+    # প্রতিটি Barcode এর সাথে সাইক্লিকভাবে Size ম্যাপ করা
+    size_count = len(selected_csv_sizes)
+    if size_count > 0:
+        df['Size'] = [selected_csv_sizes[i % size_count] for i in range(len(df))]
+    else:
+        df['Size'] = "UNKNOWN"
     
     # Dept যোগ করুন
     df['Dept'] = df['Item_classification'].apply(get_dept_value)
@@ -934,7 +987,7 @@ Uvoznik za Srbiju: Pepco d.o.o., Pariske komune 22, 11070 Beograd-Novi Beograd. 
     # SKU_Name তৈরি - barcode থেকে
     df['SKU_Name'] = df['barcode'].astype(str)
 
-    # CSV এর কলাম - Size যোগ করা হয়েছে
+    # CSV এর কলাম
     final_cols = [
         "Order_ID", "Style", "Colour", "Supplier_product_code", "Item_classification",
         "Supplier_name", "today_date",
